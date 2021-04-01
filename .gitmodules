@@ -1,0 +1,6 @@
+[submodule "vendor/rapidcheck"]
+	path = vendor/rapidcheck
+	url = https://github.com/emil-e/rapidcheck.git
+[submodule "vendor/Catch2"]
+	path = vendor/Catch2
+	url = https://github.com/catchorg/Catch2.git
