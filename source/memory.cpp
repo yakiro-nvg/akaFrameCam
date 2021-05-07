@@ -6,13 +6,15 @@
 #include <Windows.h>
 #include <malloc.h>
 #define aligned_alloc _aligned_malloc
-#define aligned_free _aligned_free
+#define aligned_free  _aligned_free
 #else
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #define aligned_free free
 #endif
+
+#include <algorithm>
 
 namespace akaFrame { namespace cam { namespace mem {
 
@@ -30,6 +32,7 @@ i64 divisor_size(void)
 void* allocate(i64 size, i64 align)
 {
         align = align < 0 ? divisor_size() : align;
+        size = std::max(size, divisor_size()); 
         CAM_ASSERT(divisor_size() % align == 0 && "bad alignment");
         CAM_ASSERT(size % divisor_size()  == 0 && "bad size");
         void *m = VirtualAlloc(nullptr, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
@@ -80,6 +83,7 @@ i64 divisor_size(void)
 void* allocate(i64 size, i64 align)
 {
         align = align < 0 ? divisor_size() : align;
+        size = std::max(size, divisor_size()); 
         CAM_ASSERT(divisor_size() % align == 0 && "bad alignment");
         CAM_ASSERT(size % divisor_size()  == 0 && "bad size");
         void *m = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
@@ -121,12 +125,13 @@ struct GeneralAllocator : public Allocator {
 
 i64 divisor_size(void)
 {
-        return 8;
+        return 4;
 }
 
 void* allocate(i64 size, i64 align)
 {
         align = align < 0 ? divisor_size() : align;
+        size = std::max(size, divisor_size()); 
         CAM_ASSERT(divisor_size() % align == 0 && "bad alignment");
         CAM_ASSERT(size % divisor_size()  == 0 && "bad size");
         void *m = aligned_alloc(size, align);

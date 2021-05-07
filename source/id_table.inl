@@ -2,17 +2,28 @@
  * Unauthorized copying of this file, via any medium is strictly prohibited. */
 namespace akaFrame { namespace cam { namespace id_table {
 
-inline void* resolve(IdTable &t, id_t id)
+id_t u32_id(u32 u)
+{
+        id_t id; id._u = u;
+        return id;
+}
+
+u32 id_u32(id_t id)
+{
+        return id._u;
+}
+
+template <typename T> T* resolve(IdTable &t, id_t id)
 {
         const auto &r = t._records[id._v._index];
         if (r._in_use && r._generation == id._v._generation) {
-                return r._v._iu._p;
+                return (T*)r._v._iu._p;
         } else {
-                return NULL;
+                return nullptr;
         }
 }
 
-inline void* relocate(IdTable &t, id_t id, void *new_address)
+void* relocate(IdTable &t, id_t id, void *new_address)
 {
         CAM_ASSERT(new_address);
         auto &r = t._records[id._v._index];

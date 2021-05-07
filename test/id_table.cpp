@@ -1,11 +1,9 @@
 /* Copyright (c) 2021 FPT Software - All Rights Reserved. Proprietary.
  * Unauthorized copying of this file, via any medium is strictly prohibited. */
 #include <vector>
-
 #include <catch.hpp>
 #include <rapidcheck.h>
 #include <rapidcheck/state.h>
-
 #include <source/id_table.h>
 
 using namespace std;
@@ -43,9 +41,9 @@ static void full_check(const IdTableModel &model, IdTableSut &sut)
                 auto mid = model.ids[i];
                 auto sid = sut.mapping[i];
                 if (mid.in_use) {
-                        REQUIRE(resolve(sut.tbl, sid) == (void*)mid.address);
+                        REQUIRE(resolve<void>(sut.tbl, sid) == (void*)mid.address);
                 } else {
-                        REQUIRE(resolve(sut.tbl, sid) == nullptr);
+                        REQUIRE(resolve<void>(sut.tbl, sid) == nullptr);
                 }
         }
 }
@@ -74,7 +72,7 @@ struct MakeIdCommand
         {
                 full_check(s0, sut);
                 for (int i = 0; i < (int)addresses.size(); ++i) {
-                        const auto id = make_id(sut.tbl, (void*)addresses[i]);
+                        const auto id = make(sut.tbl, (void*)addresses[i]);
                         sut.mapping.push_back(id);
                 }
         }
@@ -117,7 +115,7 @@ struct DropIdCommand
         {
                 full_check(s0, sut);
                 const auto sid = sut.mapping[index(s0)];
-                drop_id(sut.tbl, sid);
+                drop(sut.tbl, sid);
         }
 };
 
@@ -162,7 +160,7 @@ struct ClearCommand
                 full_check(s0, sut);
                 for (int i = 0; i < (int)s0.ids.size(); ++i) {
                         if (s0.ids[i].in_use) {
-                                drop_id(sut.tbl, sut.mapping[i]);
+                                drop(sut.tbl, sut.mapping[i]);
                         }
                 }
         }

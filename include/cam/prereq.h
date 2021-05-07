@@ -11,8 +11,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <string.h>
-
-namespace akaFrame { namespace cam {
+#include <stddef.h>
 
 typedef int8_t   i8;
 typedef int16_t  i16;
@@ -24,13 +23,5 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 typedef float    f32;
 typedef double   f64;
-
-}} // namespace akaFrame.cam
-
-#if SX_PLATFORM_WINDOWS
-#pragma warning(disable: 4251) // needs to have dll-interface
-#endif
-
-struct cam_s;
 
 #endif // !_CAM_PREREQ_H_

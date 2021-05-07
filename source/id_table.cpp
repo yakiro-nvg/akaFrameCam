@@ -3,7 +3,7 @@
 #include "id_table.h"
 
 #define MINIMUM_FREE_INDICES 1024
-#define MAX_NUM_IDS (1u << 22)
+#define MAX_NUM_IDS (1u << 24)
 
 namespace akaFrame { namespace cam {
 
@@ -35,7 +35,7 @@ IdTable::~IdTable(void)
 
 namespace id_table {
 
-id_t make_id(IdTable &t, void *address)
+id_t make(IdTable &t, void *address)
 {
         CAM_ASSERT(address);
 
@@ -61,11 +61,12 @@ id_t make_id(IdTable &t, void *address)
         r._in_use = true; r._v._iu._p = address;
 
         id_t id;
-        id._v._index = idx; id._v._generation = r._generation;
+        id._v._index      = idx;
+        id._v._generation = r._generation;
         return id;
 }
 
-void drop_id(IdTable &t, id_t id)
+void drop(IdTable &t, id_t id)
 {
         if (id._v._index > 0) {
                 auto &node      = t._records[id._v._index];

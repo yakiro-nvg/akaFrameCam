@@ -3,7 +3,7 @@
 #ifndef _CAM_ID_TABLE_H_
 #define _CAM_ID_TABLE_H_
 
-#include "prereq.h"
+#include <cam/prereq.h>
 #include "memory.h"
 #include "array.h"
 
@@ -11,13 +11,14 @@ namespace akaFrame { namespace cam {
 
 union id_t {
         struct {
-#if SX_CPU_ENDIAN_LITTLE
-                u32 _           : 2; // ptag_t
-#endif
-                u32 _index      : 22;
-                u32 _generation : 8;
 #if SX_CPU_ENDIAN_BIG
-                u32 _           : 2;
+                u32 _           : 3;
+                u32 _index      : 21;
+                u32 _generation : 8;
+#else
+                u32 _generation : 8;
+                u32 _index      : 21;
+                u32 _           : 3;
 #endif
         } _v;
         u32 _u;
@@ -30,14 +31,14 @@ It's a weak-reference so we know whether it's pointed to a dead object or not.
 It also could be updated to point to a new address, hence relocatable, which
 is needed by some module to provides fast and low-overhead serialization. */
 struct CAM_API IdTable {
-                        IdTable                (void
-                                               );
-                        IdTable                (const IdTable          &other
-                                               );
-IdTable&                operator=              (const IdTable          &other
-                                               );
-                       ~IdTable                (void
-                                               );
+                                IdTable                (void
+                                                       );
+                                IdTable                (const IdTable          &other
+                                                       );
+IdTable&                        operator=              (const IdTable          &other
+                                                       );
+                               ~IdTable                (void
+                                                       );
 
         struct record_t {
                 bool _in_use;
@@ -59,27 +60,35 @@ IdTable&                operator=              (const IdTable          &other
 
 namespace id_table {
 
-CAM_API
+inline
+id_t                            u32_id                 (u32                     u
+                                                       );
+
+inline
+u32                             id_u32                 (id_t                    id
+                                                       );
+
+template <typename T>
 /// Returns `NULL` if id has been dropped.
-void*                   resolve                (IdTable                &t
-                                              , id_t                    id
-                                               );
+T*                              resolve                (IdTable                &t
+                                                      , id_t                    id
+                                                       );
+
+inline
+void*                           relocate               (IdTable                &t
+                                                      , id_t                    id
+                                                      , void                   *new_address
+                                                       );
 
 CAM_API
-void*                   relocate               (IdTable                &t
-                                              , id_t                    id
-                                              , void                   *new_address
-                                               );
+id_t                            make                   (IdTable                &t
+                                                      , void                   *address
+                                                       );
 
 CAM_API
-id_t                    make_id                (IdTable                &t
-                                              , void                   *address
-                                               );
-
-CAM_API
-void                    drop_id                (IdTable                &t
-                                              , id_t                    id
-                                               );
+void                            drop                   (IdTable                &t
+                                                      , id_t                    id
+                                                       );
 
 }}} // namespace akaFrame.cam.id_table
 

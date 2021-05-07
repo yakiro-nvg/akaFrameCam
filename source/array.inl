@@ -3,7 +3,7 @@
 namespace akaFrame { namespace cam {
 
 template <typename T>
-inline Array<T>::Array(mem::Allocator &allocator)
+Array<T>::Array(mem::Allocator &allocator)
         : _allocator(allocator)
         , _size(0)
         , _capacity(0)
@@ -13,7 +13,7 @@ inline Array<T>::Array(mem::Allocator &allocator)
 }
 
 template <typename T>
-inline Array<T>::Array(const Array<T> &other)
+Array<T>::Array(const Array<T> &other)
         : _allocator(other._allocator)
         , _size(0)
         , _capacity(0)
@@ -23,7 +23,7 @@ inline Array<T>::Array(const Array<T> &other)
 }
 
 template <typename T>
-inline Array<T>& Array<T>::operator=(const Array<T> &other)
+Array<T>& Array<T>::operator=(const Array<T> &other)
 {
         array::resize(*this, other._size);
         memcpy(_items, other._items, sizeof(T) * other._size);
@@ -31,25 +31,25 @@ inline Array<T>& Array<T>::operator=(const Array<T> &other)
 }
 
 template <typename T>
-inline Array<T>::~Array(void)
+Array<T>::~Array(void)
 {
         _allocator.deallocate(_items);
 }
 
 template <typename T>
-inline Array<T>::operator bool(void) const
+Array<T>::operator bool(void) const
 {
         return _size != 0;
 }
 
 template <typename T>
-inline T& Array<T>::operator[](i64 i)
+T& Array<T>::operator[](i64 i)
 {
         return _items[i];
 }
 
 template <typename T>
-inline const T& Array<T>::operator[](i64 i) const
+const T& Array<T>::operator[](i64 i) const
 {
         return _items[i];
 }
@@ -57,7 +57,7 @@ inline const T& Array<T>::operator[](i64 i) const
 namespace array {
 
 template <typename T>
-inline i64 size(const Array<T> &a)
+i64 size(const Array<T> &a)
 {
         return a._size;
 }
@@ -79,7 +79,7 @@ void reserve(Array<T> &a, i64 capacity)
 }
 
 template <typename T>
-inline void resize(Array<T> &a, i64 new_size)
+void resize(Array<T> &a, i64 new_size)
 {
         if (new_size > a._capacity) {
                 reserve(a, new_size);
@@ -89,39 +89,39 @@ inline void resize(Array<T> &a, i64 new_size)
 }
 
 template <typename T>
-inline void push(Array<T> &a, const T &item)
+void push(Array<T> &a, const T &item)
 {
         if (a._size + 1 > a._capacity) {
-                resize(a, a._size + 1);
+                reserve(a, a._size + 1);
         }
 
         push_unsafe(a, item);
 }
 
 template <typename T>
-inline T& push(Array<T> &a)
+T& push(Array<T> &a)
 {
         if (a._size + 1 > a._capacity) {
-                resize(a, a._size + 1);
+                reserve(a, a._size + 1);
         }
 
         return push_unsafe(a);
 }
 
 template <typename T>
-inline void push_unsafe(Array<T> &a, const T &item)
+void push_unsafe(Array<T> &a, const T &item)
 {
         a._items[a._size++] = item;
 }
 
 template <typename T>
-inline T& push_unsafe(Array<T> &a)
+T& push_unsafe(Array<T> &a)
 {
         return a._items[a._size++];
 }
 
 template <typename T>
-inline T* push_many(Array<T> &a, i64 num_items)
+T* push_many(Array<T> &a, i64 num_items)
 {
         const i64 old_size = a._size;
 
