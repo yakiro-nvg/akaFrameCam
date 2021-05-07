@@ -74,7 +74,7 @@ Z390Loader::~Z390Loader()
         }
 }
 
-int Z390Loader::load_chunk(const void *buff, int buff_size)
+cam_error_t Z390Loader::load_chunk(const void *buff, int buff_size)
 {
         auto c = *(const Chunk*)buff;
         if (buff_size < sizeof(Chunk) || !verify_chunk_header(c)) {

@@ -17,7 +17,7 @@ virtual                        ~Z390Loader             (void
                                                        );
 
 virtual
-int                             load_chunk             (const void             *buff
+cam_error_t                     load_chunk             (const void             *buff
                                                       , int                     buff_size
                                                        );
 

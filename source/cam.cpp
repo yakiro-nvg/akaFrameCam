@@ -61,7 +61,7 @@ cam_s::~cam_s()
 #endif
 }
 
-struct cam_s* cam_new(int *out_ec)
+struct cam_s* cam_new(cam_error_t *out_ec)
 {
         *out_ec = CEC_SUCCESS;
         void *p = general_allocator().allocate(sizeof(cam_s));
@@ -87,10 +87,10 @@ void cam_add_program(struct cam_s *cam, const char *name, cam_program_t *program
         set(*cam->_program_table, name, program);
 }
 
-int cam_load_chunk(struct cam_s *cam, const void *buff, int buff_size)
+cam_error_t cam_load_chunk(struct cam_s *cam, const void *buff, int buff_size)
 {
         for (int i = 0; i < size(cam->_loaders); ++i) {
-                int ec = cam->_loaders[i]->load_chunk(buff, buff_size);
+                auto ec = cam->_loaders[i]->load_chunk(buff, buff_size);
                 if (ec == CEC_NOT_SUPPORTED) {
                         continue;  // next loader
                 } else {
@@ -101,7 +101,7 @@ int cam_load_chunk(struct cam_s *cam, const void *buff, int buff_size)
         return CEC_NOT_SUPPORTED; // not recognized
 }
 
-int cam_address_make(struct cam_s *cam, void *buff, bool borrow, cam_address_t *out_address)
+cam_error_t cam_address_make(struct cam_s *cam, void *buff, bool borrow, cam_address_t *out_address)
 {
         if (borrow) {
                 int num_borrows = sizeof(cam->_borrows) / sizeof(cam->_borrows[0]);
@@ -187,9 +187,10 @@ void cam_go_back(struct cam_s *cam, cam_tid_t tid)
 }
 
 cam_tid_t cam_task_new(
-        struct cam_s *cam, int *out_ec, cam_pid_t entry,
+        struct cam_s *cam, cam_error_t *out_ec, cam_pid_t entry,
         cam_address_t *params, int arity, cam_k_t k, void *ktx)
 {
+        *out_ec = CEC_SUCCESS;
         int task_size = sizeof(Task) + sizeof(void*)*CAM_MAX_PROVIDERS;
         auto ntp = general_allocator().allocate(task_size);
         cam_tid_t tid = { make(cam->_id_table, ntp)._u };

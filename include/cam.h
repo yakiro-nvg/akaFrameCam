@@ -107,7 +107,7 @@ typedef struct cam_program_s {
 
 CAM_API
 /// Initializes a new CAM instance.
-struct cam_s*                   cam_new                (int                    *out_ec
+struct cam_s*                   cam_new                (cam_error_t            *out_ec
                                                        );
 
 CAM_API
@@ -130,14 +130,14 @@ void                            cam_add_program        (struct cam_s           *
 
 CAM_API
 /// Adds a new code chunk, `buff` will not be copied internally, dont' free it.
-int                             cam_load_chunk         (struct cam_s           *cam
+cam_error_t                     cam_load_chunk         (struct cam_s           *cam
                                                       , const void             *buff
                                                       , int                     buff_size
                                                        );
 
 CAM_API
-/// Makes an address that pointed to `buff`, returns error code.
-int                             cam_address_make       (struct cam_s           *cam
+/// Makes an address that pointed to given `buff`.
+cam_error_t                     cam_address_make       (struct cam_s           *cam
                                                       , void                   *buff
                                                       , bool                    borrow
                                                       , cam_address_t          *out_address
@@ -189,7 +189,7 @@ void                            cam_go_back            (struct cam_s           *
 CAM_API
 /// Creates a logical (green) task, cooperative scheduled with a finalizer `k`.
 cam_tid_t                       cam_task_new           (struct cam_s           *cam
-                                                      , int                    *out_ec
+                                                      , cam_error_t            *out_ec
                                                       , cam_pid_t               entry
                                                       , cam_address_t          *params
                                                       , int                     arity

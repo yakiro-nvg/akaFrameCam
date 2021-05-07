@@ -14,7 +14,7 @@ static void helloa1_end(struct cam_s *cam, cam_tid_t tid, void *ktx)
 
 TEST_CASE("helloa1")
 {
-        int ec;
+        cam_error_t ec;
         auto cam = cam_new(&ec);
         REQUIRE(cam != nullptr);
         REQUIRE(ec == CEC_SUCCESS);

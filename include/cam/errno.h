@@ -11,5 +11,6 @@
 #define CEC_BAD_CHUNK     4
 #define CEC_NOT_SUPPORTED 5
 #define CEC_NO_MEMORY     6
+typedef int cam_error_t;
 
 #endif // !_CAM_ERRNO_H_

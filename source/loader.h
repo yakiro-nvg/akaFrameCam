@@ -8,24 +8,24 @@
 namespace akaFrame { namespace cam {
 
 struct Loader {
-                        Loader                 (void
-                                               ) { }
-                        Loader                 (const Loader           &other
-                                               ) = delete;
-Loader&                 operator=              (const Loader           &other
-                                               ) = delete;
+                                Loader                 (void
+                                                       ) { }
+                                Loader                 (const Loader           &other
+                                                       ) = delete;
+Loader&                         operator=              (const Loader           &other
+                                                       ) = delete;
 
-virtual                ~Loader                 (void
-                                               ) { }
-
-virtual
-int                     load_chunk             (const void             *buff
-                                              , int                     buff_size
-                                               ) = 0;
+virtual                        ~Loader                 (void
+                                                       ) { }
 
 virtual
-cam_provider_t*         provider               (void
-                                               ) = 0;
+cam_error_t                     load_chunk             (const void             *buff
+                                                      , int                     buff_size
+                                                       ) = 0;
+
+virtual
+cam_provider_t*                 provider               (void
+                                                       ) = 0;
 };
 
 }} // namespace akaFrame.cam
