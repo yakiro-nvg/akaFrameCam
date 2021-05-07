@@ -9,31 +9,43 @@ cam_address_t u32_address(u32 u)
         return a;
 }
 
-u32 read_uint2b(const u8 *start)
+u32 load_uint2b(const void *start)
 {
+        auto s = (const u8*)start;
 #if SX_CPU_ENDIAN_BIG
 #error "not implemented"
 #else
-        return (start[0] << 8) | start[1];
+        return (s[0] << 8) | s[1];
 #endif
 }
 
-u32 read_uint3b(const u8 *start)
+u32 load_uint3b(const void *start)
 {
+        auto s = (const u8*)start;
 #if SX_CPU_ENDIAN_BIG
 #error "not implemented"
 #else
-        return (start[0] << 16) | (start[1] << 8) | start[2];
+        return (s[0] << 16) | (s[1] << 8) | s[2];
 #endif
 }
 
-u32 read_uint4b(const u8 *start)
+u32 load_uint4b(const void *start)
 {
+        auto s = (const u8*)start;
 #if SX_CPU_ENDIAN_BIG
 #error "not implemented"
 #else
-        return (start[0] << 16) | (start[1] << 8) | start[2];
+        return (s[0] << 24) | (s[1] << 16) | (s[2] << 8) | s[3];
 #endif
+}
+
+void save_uint4b(void *start, u32 value)
+{
+        auto s = (u8*)start;
+        s[0] = (value >> 24) & 0xff;
+        s[1] = (value >> 16) & 0xff;
+        s[2] = (value >>  8) & 0xff;
+        s[3] = (value      ) & 0xff;
 }
 
 template <typename T>

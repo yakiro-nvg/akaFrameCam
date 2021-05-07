@@ -221,7 +221,7 @@ static bool to_chunk(const uint8_t *obj, int obj_size, FILE *outf)
                 char c3 = EBCDIC_TO_ASCII[line[3]];
 
                 if (c1 == 'E' && c2 == 'S' && c3 == 'D') {
-                        u32 esd_id = read_uint2b(line + 14);
+                        u32 esd_id = load_uint2b(line + 14);
 
                         char esd_name_buff[9];
                         esd_name_buff[8] = '\0';
@@ -235,8 +235,8 @@ static bool to_chunk(const uint8_t *obj, int obj_size, FILE *outf)
                         case EsdType::SD: {
                                 auto &p = programs[esd_id];
                                 p.name  = esd_name;
-                                p.entry = read_uint3b(line + 25);
-                                p.size  = read_uint3b(line + 29);
+                                p.entry = load_uint3b(line + 25);
+                                p.size  = load_uint3b(line + 29);
                                 break; }
                         case EsdType::LD:
                                 break;
@@ -249,7 +249,7 @@ static bool to_chunk(const uint8_t *obj, int obj_size, FILE *outf)
                                 return false;
                         }
                 } else if (c1 == 'T' && c2 == 'X' && c3 == 'T') {
-                        u32 esd_id = read_uint2b(line + 14);
+                        u32 esd_id = load_uint2b(line + 14);
                         auto pitr = programs.find(esd_id);
                         if (pitr == programs.end()) {
                                 printf("record #%0x8d: undefined ESD 0x%02x\n", record_num, esd_id);
@@ -258,8 +258,8 @@ static bool to_chunk(const uint8_t *obj, int obj_size, FILE *outf)
 
                         Text txt;
                         txt.code    = line + 16;
-                        txt.address = read_uint3b(line + 5);
-                        txt.size    = read_uint2b(line + 10);
+                        txt.address = load_uint3b(line + 5);
+                        txt.size    = load_uint2b(line + 10);
                         p.texts.push_back(txt);
                 } else if (c1 == 'E' && c2 == 'N' && c3 == 'D') {
                         // nop

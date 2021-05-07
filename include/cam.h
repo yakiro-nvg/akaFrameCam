@@ -15,7 +15,7 @@ struct cam_s;
 #define CAS_GLOBAL      0
 #define CAS_LOCAL_STACK 1
 #define CAS_BORROWED    2
-#define CAS_PROGRAM_ID  3
+#define CAS_ID          3
 
 #pragma pack(push, 1)
 typedef union cam_address_u {
@@ -29,7 +29,7 @@ typedef union cam_address_u {
                 u32 _space  : 2;
                 u32 _       : 1;
 #endif
-        } _v;
+        } _v; // CAS_GLOBAL or CAS_LOCAL_STACK
         struct {
 #if SX_CPU_ENDIAN_BIG
                 u32 _       : 3;
@@ -40,7 +40,18 @@ typedef union cam_address_u {
                 u32 _index  : 4;
                 u32 _       : 3;
 #endif
-        } _b;
+        } _b; // CAS_BORROWED
+        struct {
+#if SX_CPU_ENDIAN_BIG
+                u32 _           : 3;
+                u32 _index      : 21;
+                u32 _generation : 8;
+#else
+                u32 _generation : 8;
+                u32 _index      : 21;
+                u32 _           : 3;
+#endif
+        } _i; // CAS_ID
         u32 _u;
 } cam_address_t;
 
@@ -125,21 +136,15 @@ int                             cam_load_chunk         (struct cam_s           *
                                                        );
 
 CAM_API
-/// Borrows an external buffer and returns managed address.
-int                             cam_address_borrow     (struct cam_s           *cam
+/// Makes an address that pointed to `buff`, returns error code.
+int                             cam_address_make       (struct cam_s           *cam
                                                       , void                   *buff
+                                                      , bool                    borrow
                                                       , cam_address_t          *out_address
                                                        );
 
 CAM_API
-/// Relocates an address, points to a new location.
-void                            cam_address_relocate   (struct cam_s           *cam
-                                                      , cam_address_t           address
-                                                      , void                   *buff
-                                                       );
-
-CAM_API
-/// Drops (not deallocate, since it's borrowed) `address`.
+/// Drops (not deallocate, since it's just a handle.
 void                            cam_address_drop       (struct cam_s           *cam
                                                       , cam_address_t           address
                                                        );

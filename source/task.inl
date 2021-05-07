@@ -9,6 +9,7 @@ void* at(Task &task, int offset)
 
 u8* push(Task &task, int bytes, cam_address_t *out_address)
 {
+        out_address->_u = 0;
         out_address->_v._space  = CAS_LOCAL_STACK;
         out_address->_v._offset = (u32)array::size(task._stack);
         return array::push_many(task._stack, bytes);

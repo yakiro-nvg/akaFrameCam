@@ -60,7 +60,7 @@ ProgramTable::ProgramTable(struct cam_s *cam)
 ProgramTable::~ProgramTable()
 {
         for (auto p : _programs) {
-                drop(_cam->_id_table, u32_id(p.second._u));
+                drop(_cam->_id_table, u32_address(p.second._u));
         }
 }
 
@@ -70,9 +70,9 @@ void set(ProgramTable &pt, const char *name, cam_program_t *program)
 {
         auto itr = pt._programs.find(name);
         if (itr != pt._programs.end()) {
-                relocate(pt._cam->_id_table, u32_id(itr->second._u), program);
+                relocate(pt._cam->_id_table, u32_address(itr->second._u), program);
         } else {
-                pt._programs[name] = { id_u32(make(pt._cam->_id_table, program)) };
+                pt._programs[name] = { make(pt._cam->_id_table, program)._u };
         }
 }
 

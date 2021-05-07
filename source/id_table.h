@@ -3,26 +3,11 @@
 #ifndef _CAM_ID_TABLE_H_
 #define _CAM_ID_TABLE_H_
 
-#include <cam/prereq.h>
+#include <cam.h>
 #include "memory.h"
 #include "array.h"
 
 namespace akaFrame { namespace cam {
-
-union id_t {
-        struct {
-#if SX_CPU_ENDIAN_BIG
-                u32 _           : 3;
-                u32 _index      : 21;
-                u32 _generation : 8;
-#else
-                u32 _generation : 8;
-                u32 _index      : 21;
-                u32 _           : 3;
-#endif
-        } _v;
-        u32 _u;
-};
 
 /** A table used to identify object indirectly.
 \brief Provides indirect reference `id_t` that could be used instead of
@@ -60,34 +45,26 @@ IdTable&                        operator=              (const IdTable          &
 
 namespace id_table {
 
-inline
-id_t                            u32_id                 (u32                     u
-                                                       );
-
-inline
-u32                             id_u32                 (id_t                    id
-                                                       );
-
 template <typename T>
 /// Returns `NULL` if id has been dropped.
 T*                              resolve                (IdTable                &t
-                                                      , id_t                    id
+                                                      , cam_address_t           id
                                                        );
 
 inline
 void*                           relocate               (IdTable                &t
-                                                      , id_t                    id
+                                                      , cam_address_t           id
                                                       , void                   *new_address
                                                        );
 
 CAM_API
-id_t                            make                   (IdTable                &t
+cam_address_t                   make                   (IdTable                &t
                                                       , void                   *address
                                                        );
 
 CAM_API
 void                            drop                   (IdTable                &t
-                                                      , id_t                    id
+                                                      , cam_address_t           id
                                                        );
 
 }}} // namespace akaFrame.cam.id_table

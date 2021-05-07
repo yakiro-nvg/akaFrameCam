@@ -35,7 +35,7 @@ IdTable::~IdTable(void)
 
 namespace id_table {
 
-id_t make(IdTable &t, void *address)
+cam_address_t make(IdTable &t, void *address)
 {
         CAM_ASSERT(address);
 
@@ -60,19 +60,20 @@ id_t make(IdTable &t, void *address)
         auto &r = t._records[idx];
         r._in_use = true; r._v._iu._p = address;
 
-        id_t id;
-        id._v._index      = idx;
-        id._v._generation = r._generation;
+        cam_address_t id;
+        id._v._space      = CAS_ID;
+        id._i._index      = idx;
+        id._i._generation = r._generation;
         return id;
 }
 
-void drop(IdTable &t, id_t id)
+void drop(IdTable &t, cam_address_t id)
 {
-        if (id._v._index > 0) {
-                auto &node      = t._records[id._v._index];
+        if (id._i._index > 0) {
+                auto &node      = t._records[id._i._index];
                 auto &root      = t._records[0];
                 auto &root_next = t._records[root._v._fi._next];
-                CAM_ASSERT(node._generation == id._v._generation && "double drop");
+                CAM_ASSERT(node._generation == id._i._generation && "double drop");
 
                 node._in_use = false;
                 ++node._generation;
@@ -81,8 +82,8 @@ void drop(IdTable &t, id_t id)
                 ++t._num_free_indices;
                 node._v._fi._next      = root._v._fi._next;
                 node._v._fi._prev      = 0;
-                root_next._v._fi._prev = id._v._index;
-                root._v._fi._next      = id._v._index;
+                root_next._v._fi._prev = id._i._index;
+                root._v._fi._next      = id._i._index;
         }
 }
 

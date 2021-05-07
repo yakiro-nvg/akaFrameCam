@@ -67,7 +67,7 @@ Task::Task(
 
         task::push(*this, Continuation { k, ktx });
         frame_push(*this, entry);
-        auto p = resolve<cam_program_t>(cam->_id_table, u32_id(entry._u));
+        auto p = resolve<cam_program_t>(cam->_id_table, u32_address(entry._u));
         p->prepare(cam, tid, entry, params, arity);
         task::push(*this, Continuation { cam_nop_k, nullptr });
 }
@@ -75,7 +75,7 @@ Task::Task(
 Task::~Task()
 {
         providers_leave(_cam, _tid);
-        drop(_cam->_id_table, u32_id(_tid._u));
+        drop(_cam->_id_table, u32_address(_tid._u));
 }
 
 namespace task {
@@ -84,7 +84,7 @@ void call(Task &task, cam_pid_t pid, cam_address_t *params, int arity, cam_k_t k
 {
         push(task, Continuation { k, ktx });
         frame_push(task, pid);
-        auto p = resolve<cam_program_t>(task._cam->_id_table, u32_id(pid._u));
+        auto p = resolve<cam_program_t>(task._cam->_id_table, u32_address(pid._u));
         p->prepare(task._cam, task._tid, pid, params, arity);
         p->execute(task._cam, task._tid, pid);
 }
@@ -114,7 +114,7 @@ void resume(Task &task)
         task._yielded = false;
         do {
                 auto pid = frame_top(task)->pid;
-                auto p = resolve<cam_program_t>(task._cam->_id_table, u32_id(pid._u));
+                auto p = resolve<cam_program_t>(task._cam->_id_table, u32_address(pid._u));
                 p->execute(task._cam, task._tid, pid);
         } while (!task._yielded && task._frame != NO_FRAME);
 }

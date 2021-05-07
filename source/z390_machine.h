@@ -9,6 +9,7 @@ namespace akaFrame { namespace cam { namespace z390 {
 
 struct Z390Machine {
         u32 PC;
+        u32 CC;
         u32 R[16];
 };
 

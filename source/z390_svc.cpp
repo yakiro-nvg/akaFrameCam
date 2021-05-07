@@ -32,7 +32,7 @@ static void wto_write_msg(struct cam_s *cam, cam_tid_t tid, void *)
 {
         auto params = pop<u8*>(cam, tid);
         if ((params[3] & 0x10) != 0 && params[1] == 8) {
-                auto adr = u32_address(read_uint4b(params + 4));
+                auto adr = u32_address(load_uint4b(params + 4));
                 auto buf = (u8*)cam_address_buffer(cam, adr, tid);
                 int len = buf[1]; auto msg = (const char*)(buf + 2);
                 wto_console_write(cam, tid, msg, len, true, cam_nop_k);
@@ -53,7 +53,7 @@ static void wto(
         auto params = (u8*)cam_address_buffer(loader._cam, u32_address(m.R[1]), tid);
         if (params[0] == 0) {
                 push(loader._cam, tid, params);
-                if ((read_uint2b(params + 2) & 0x80) == 0) {
+                if ((load_uint2b(params + 2) & 0x80) == 0) {
                         // TODO: write timestamp
                         wto_console_write(loader._cam, tid, "", false, 0, wto_write_msg);
                 } else {

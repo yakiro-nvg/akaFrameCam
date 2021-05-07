@@ -35,7 +35,7 @@ cam_s&                          operator=              (const cam_s            &
         int                                           _providers_n;
         u8                                            _global_buffer[CAM_MAX_GLOBAL];
         int                                           _global_buffer_n;
-        akaFrame::cam::id_t                           _borrows[256];
+        cam_address_t                                 _borrows[256];
         akaFrame::cam::ProgramTable                  *_program_table;
 #ifdef CAM_Z390
         akaFrame::cam::z390::Z390Loader              *_z390;
@@ -55,15 +55,20 @@ cam_address_t                   u32_address            (u32                     
                                                        );
 
 inline
-u32                             read_uint2b            (const u8               *start
+u32                             load_uint2b            (const void             *start
                                                        );
 
 inline
-u32                             read_uint3b            (const u8               *start
+u32                             load_uint3b            (const void             *start
                                                        );
 
 inline
-u32                             read_uint4b            (const u8               *start
+u32                             load_uint4b            (const void             *start
+                                                       );
+
+inline
+void                            save_uint4b            (void                   *start
+                                                      , u32                     value
                                                        );
 
 template <typename T>

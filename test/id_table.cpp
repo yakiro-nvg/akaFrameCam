@@ -30,7 +30,7 @@ struct IdTableModel
 
 struct IdTableSut
 {
-        vector<akaFrame::cam::id_t> mapping;
+        vector<cam_address_t> mapping;
         IdTable tbl;
 };
 

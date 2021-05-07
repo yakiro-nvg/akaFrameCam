@@ -101,36 +101,37 @@ int cam_load_chunk(struct cam_s *cam, const void *buff, int buff_size)
         return CEC_NOT_SUPPORTED; // not recognized
 }
 
-int cam_address_borrow(struct cam_s *cam, void *buff, cam_address_t *out_address)
+int cam_address_make(struct cam_s *cam, void *buff, bool borrow, cam_address_t *out_address)
 {
-        int num_borrows = sizeof(cam->_borrows) / sizeof(cam->_borrows[0]);
+        if (borrow) {
+                int num_borrows = sizeof(cam->_borrows) / sizeof(cam->_borrows[0]);
 
-        for (auto &id : cam->_borrows) {
-                if (id._u == 0) {
-                        id = make(cam->_id_table, buff);
-                        out_address->_v._space  = CAS_BORROWED;
-                        out_address->_b._index  = &id - cam->_borrows;
-                        out_address->_b._offset = 0;
-                        return CEC_SUCCESS;
+                for (auto &id : cam->_borrows) {
+                        if (id._u == 0) {
+                                id = make(cam->_id_table, buff);
+                                out_address->_u = 0;
+                                out_address->_v._space  = CAS_BORROWED;
+                                out_address->_b._index  = &id - cam->_borrows;
+                                out_address->_b._offset = 0;
+                                return CEC_SUCCESS;
+                        }
                 }
+
+                return CEC_NO_MEMORY;
+        } else {
+                *out_address = make(cam->_id_table, buff);
+                return CEC_SUCCESS;
         }
-
-        return CEC_NO_MEMORY;
-}
-
-void cam_address_relocate(struct cam_s *cam, cam_address_t address, void *buff)
-{
-        CAM_ASSERT(address._v._space  == CAS_BORROWED);
-        CAM_ASSERT(address._b._offset == 0);
-        id_t id = cam->_borrows[address._b._index];
-        relocate(cam->_id_table, cam->_borrows[address._b._index], buff);
 }
 
 void cam_address_drop(struct cam_s *cam, cam_address_t address)
 {
-        CAM_ASSERT(address._v._space  == CAS_BORROWED);
-        CAM_ASSERT(address._b._offset == 0);
-        drop(cam->_id_table, cam->_borrows[address._b._index]);
+        if (address._v._space == CAS_BORROWED) {
+                drop(cam->_id_table, cam->_borrows[address._b._index]);
+        } else {
+                CAM_ASSERT(address._v._space == CAS_ID);
+                drop(cam->_id_table, address);
+        }
 }
 
 void* cam_address_buffer(struct cam_s *cam, cam_address_t address, cam_tid_t tid)
@@ -139,10 +140,12 @@ void* cam_address_buffer(struct cam_s *cam, cam_address_t address, cam_tid_t tid
         case CAS_GLOBAL:
                 return &cam->_global_buffer[address._v._offset];
         case CAS_LOCAL_STACK: {
-                auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
+                auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
                 return at(*t, address._v._offset); }
         case CAS_BORROWED:
                 return resolve<void>(cam->_id_table, cam->_borrows[address._b._index]);
+        case CAS_ID:
+                return resolve<void>(cam->_id_table, address);
         default:
                 CAM_ASSERT(!"bad space");
                 return nullptr;
@@ -173,13 +176,13 @@ void cam_call(
         struct cam_s *cam, cam_tid_t tid, cam_pid_t pid,
         cam_address_t *params, int arity, cam_k_t k, void *ktx)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
+        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
         call(*t, pid, params, arity, k, ktx);
 }
 
 void cam_go_back(struct cam_s *cam, cam_tid_t tid)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
+        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
         go_back(*t);
 }
 
@@ -189,58 +192,58 @@ cam_tid_t cam_task_new(
 {
         int task_size = sizeof(Task) + sizeof(void*)*CAM_MAX_PROVIDERS;
         auto ntp = general_allocator().allocate(task_size);
-        cam_tid_t tid = { id_u32(make(cam->_id_table, ntp)) };
+        cam_tid_t tid = { make(cam->_id_table, ntp)._u };
         new (ntp) Task(cam, tid, entry, params, arity, k, ktx);
         return tid;
 }
 
 void cam_task_delete(struct cam_s *cam, cam_tid_t tid)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
+        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
         t->~Task(); general_allocator().deallocate(t);
 }
 
 cam_pid_t cam_top_program(struct cam_s *cam, cam_tid_t tid)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
+        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
         return top_program(*t);
 }
 
 void cam_yield(struct cam_s *cam, cam_tid_t tid, cam_k_t k, void *ktx)
 {
-        id_t id = u32_id(tid._u);
+        auto id = u32_address(tid._u);
         auto t = resolve<Task>(cam->_id_table, id);
         yield(*t, k, ktx);
 }
 
 void cam_resume(struct cam_s *cam, cam_tid_t tid)
 {
-        id_t id = u32_id(tid._u);
+        auto id = u32_address(tid._u);
         auto t = resolve<Task>(cam->_id_table, id);
         resume(*t);
 }
 
 void* cam_get_tlpvs(struct cam_s *cam, cam_tid_t tid, int index)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
+        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
         return t->_tlpvs[index];
 }
 
 void cam_set_tlpvs(struct cam_s *cam, cam_tid_t tid, int index, void *state)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
+        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
         t->_tlpvs[index] = state;
 }
 
 u8* cam_push(struct cam_s *cam, cam_tid_t tid, int bytes, cam_address_t *out_address)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
+        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
         return push(*t, bytes, out_address);
 }
 
 u8* cam_pop(struct cam_s *cam, cam_tid_t tid, int bytes)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
+        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
         return pop(*t, bytes);
 }
 
@@ -249,6 +252,7 @@ u8* cam_global_grow(struct cam_s *cam, int bytes, cam_address_t *out_address)
         int old_size = cam->_global_buffer_n;
         cam->_global_buffer_n += bytes;
         CAM_ASSERT(cam->_global_buffer_n <= CAM_MAX_GLOBAL);
+        out_address->_u = 0;
         out_address->_v._space  = CAS_GLOBAL;
         out_address->_v._offset = old_size;
         return cam->_global_buffer + old_size;
@@ -256,10 +260,10 @@ u8* cam_global_grow(struct cam_s *cam, int bytes, cam_address_t *out_address)
 
 bool cam_is_alive_program(struct cam_s *cam, cam_pid_t pid)
 {
-        return resolve<void>(cam->_id_table, u32_id(pid._u)) != nullptr;
+        return resolve<void>(cam->_id_table, u32_address(pid._u)) != nullptr;
 }
 
 bool cam_is_alive_task(struct cam_s *cam, cam_tid_t tid)
 {
-        return resolve<void>(cam->_id_table, u32_id(tid._u)) != nullptr;
+        return resolve<void>(cam->_id_table, u32_address(tid._u)) != nullptr;
 }

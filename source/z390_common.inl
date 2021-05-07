@@ -14,7 +14,7 @@ Z390Machine& get_machine(struct cam_s *cam, cam_tid_t tid, int index)
 
 Z390Program& get_program(struct cam_s *cam, cam_pid_t pid)
 {
-        auto p = id_table::resolve<u8>(cam->_id_table, id_table::u32_id(pid._u));
+        auto p = id_table::resolve<u8>(cam->_id_table, u32_address(pid._u));
         return *(Z390Program*)(p - offsetof(Z390Program, _p));
 }
 
