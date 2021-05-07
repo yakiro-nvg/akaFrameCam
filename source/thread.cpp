@@ -26,15 +26,11 @@ static void providers_leave(struct cam_s *cam, cam_tid_t tid)
 }
 
 Thread::Thread(
-        struct cam_s *cam, cam_tid_t tid, int stack_size,
-        cam_pid_t entry, cam_address_t *params, int arity)
+        struct cam_s *cam, cam_tid_t tid, cam_pid_t entry, cam_address_t *params, int arity)
         : _cam(cam)
         , _tid(tid)
-        , _stack_size(stack_size)
-        , _local_storage((u8*)(this + 1) + sizeof(void*)*CAM_MAX_PROVIDERS)
-        , _local_storage_n(0)
-        , _yielded(false)
-        , _top_pid(entry)
+        , _stack(page_allocator())
+        , _tlpvs((void**)(this + 1))
 {
         providers_entry(cam, _tid);
 
@@ -60,18 +56,22 @@ void call(Thread &thread, cam_pid_t pid, cam_address_t *params, int arity, cam_k
 
 void yield(Thread &thread, cam_k_t k)
 {
+#if 0
         thread_push(thread._cam, thread._tid, k);
         thread_push(thread._cam, thread._tid, thread._top_pid);
         thread._yielded = true;
+#endif
 }
 
 void resume(Thread &thread)
 {
+#if 0
         thread._yielded = false;
         auto pid = thread_pop<cam_pid_t>(thread._cam, thread._tid);
         auto p = resolve<cam_program_t>(thread._cam->_id_table, u32_id(pid._u));
         thread_pop<cam_k_t>(thread._cam, thread._tid)(thread._cam, thread._tid);
         p->execute(thread._cam, thread._tid, pid);
+#endif
 }
 
 }}} // namespace akaFrame.cam.thread

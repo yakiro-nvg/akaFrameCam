@@ -26,7 +26,7 @@ inline Z390Loader& loader(Z390Program &p)
 
 inline Z390Machine& machine(Z390Program &p, cam_tid_t tid)
 {
-        return *(Z390Machine*)*cam_thread_tlpvs(loader(p)._cam, tid, p._p.provider->index);
+        return *(Z390Machine*)cam_thread_get_tlpvs(loader(p)._cam, tid, p._p.provider->index);
 }
 
 static void load(struct cam_s *cam, cam_pid_t pid)

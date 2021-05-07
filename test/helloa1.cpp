@@ -17,7 +17,7 @@ TEST_CASE("helloa1")
         auto helloa1 = cam_resolve(cam, "HELLOA1");
         REQUIRE(cam_is_alive_program(cam, helloa1));
 
-        auto thread = cam_thread_new(cam, &ec, 4096, helloa1, nullptr, 0);
+        auto thread = cam_thread_new(cam, &ec, helloa1, nullptr, 0);
         REQUIRE(ec == CEC_SUCCESS);
         REQUIRE(cam_is_alive_thread(cam, thread));
         cam_thread_resume(cam, thread);

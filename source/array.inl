@@ -124,11 +124,7 @@ template <typename T>
 T* push_many(Array<T> &a, i64 num_items)
 {
         const i64 old_size = a._size;
-
-        if (a._size + num_items > a._capacity) {
-                resize(a, a._size + num_items);
-        }
-
+        resize(a, old_size + num_items);
         return a._items + old_size;
 }
 

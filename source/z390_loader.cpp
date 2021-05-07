@@ -26,13 +26,14 @@ static void t_entry(struct cam_provider_s *provider, cam_tid_t tid)
         auto &loader = from_provider(provider);
         auto m = general_allocator().allocate(sizeof(Z390Machine));
         memset(m, 0, sizeof(Z390Machine));
-        *cam_thread_tlpvs(loader._cam, tid, provider->index) = m;
+        cam_thread_set_tlpvs(loader._cam, tid, provider->index, m);
 }
 
 static void t_leave(struct cam_provider_s *provider, cam_tid_t tid)
 {
         auto &loader = from_provider(provider);
-        general_allocator().deallocate(*cam_thread_tlpvs(loader._cam, tid, provider->index));
+        auto m = cam_thread_get_tlpvs(loader._cam, tid, provider->index);
+        general_allocator().deallocate(m);
 }
 
 static cam_pid_t resolve(struct cam_provider_s *provider, const char *name)

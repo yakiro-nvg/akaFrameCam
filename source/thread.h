@@ -4,6 +4,7 @@
 #define _CAM_Z390_THREAD_H_
 
 #include <cam.h>
+#include "array.h"
 
 namespace akaFrame { namespace cam {
 
@@ -13,7 +14,6 @@ struct Thread {
 
                                 Thread                 (struct cam_s           *cam
                                                       , cam_tid_t               tid
-                                                      , int                     stack_size
                                                       , cam_pid_t               entry
                                                       , cam_address_t          *params
                                                       , int                     arity
@@ -25,16 +25,29 @@ Thread&                         operator=              (const Thread           &
                                ~Thread                 (void
                                                        );
 
-        struct cam_s *_cam;
-        cam_tid_t     _tid;
-        int           _stack_size;
-        u8           *_local_storage;
-        int           _local_storage_n;
-        cam_pid_t     _top_pid;
-        bool          _yielded;
+        struct cam_s  *_cam;
+        cam_tid_t      _tid;
+        Array<u8>      _stack;
+        void         **_tlpvs;
 };
 
 namespace thread {
+
+inline
+void*                           at                     (Thread                 &thread
+                                                      , int                     offset
+                                                       );
+
+inline
+u8*                             push                   (Thread                 &thread
+                                                      , int                     bytes
+                                                      , cam_address_t          *out_address
+                                                       );
+
+inline
+u8*                             pop                    (Thread                 &thread
+                                                      , int                     bytes
+                                                       );
 
 void                            call                   (Thread                 &thread
                                                       , cam_pid_t               pid
@@ -51,5 +64,7 @@ void                            resume                 (Thread                 &
                                                        );
 
 }}} // namespace akaFrame.cam.thread
+
+#include "thread.inl"
 
 #endif // !_CAM_Z390_THREAD_H_

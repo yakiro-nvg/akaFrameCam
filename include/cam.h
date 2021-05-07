@@ -13,7 +13,7 @@ struct cam_s;
 
 /// Address space.
 #define CAS_GLOBAL       0
-#define CAS_THREAD_LOCAL 1
+#define CAS_THREAD_STACK 1
 #define CAS_BORROWED     2
 #define CAS_PROGRAM_ID   3
 
@@ -177,7 +177,6 @@ CAM_API
 /// Creates a logical (green) thread, cooperative scheduled.
 cam_tid_t                       cam_thread_new         (struct cam_s           *cam
                                                       , int                    *out_ec
-                                                      , int                     stack_size
                                                       , cam_pid_t               entry
                                                       , cam_address_t          *params
                                                       , int                     arity
@@ -203,10 +202,18 @@ void                            cam_thread_resume      (struct cam_s           *
                                                        );
 
 CAM_API
-/// Returns thread local provider state pointer-to-pointer at given `index`.
-void**                          cam_thread_tlpvs       (struct cam_s           *cam
+/// Gets thread local provider state at given `index`.
+void*                           cam_thread_get_tlpvs   (struct cam_s           *cam
                                                       , cam_tid_t               tid
-                                                      , int                     offset
+                                                      , int                     index
+                                                       );
+
+CAM_API
+/// Gets thread local provider state at given `index`.
+void                            cam_thread_set_tlpvs   (struct cam_s           *cam
+                                                      , cam_tid_t               tid
+                                                      , int                     index
+                                                      , void                   *state
                                                        );
 
 CAM_API
@@ -223,7 +230,6 @@ u8*                             cam_thread_pop         (struct cam_s           *
                                                       , cam_tid_t               tid
                                                       , int                     bytes
                                                        );
-
 
 CAM_API
 /// Allocates global memory, which is grow-only (can't be deallocated).

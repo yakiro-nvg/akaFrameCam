@@ -138,9 +138,9 @@ void* cam_address_buffer(struct cam_s *cam, cam_address_t address, cam_tid_t tid
         switch (address._v._space) {
         case CAS_GLOBAL:
                 return &cam->_global_buffer[address._v._offset];
-        case CAS_THREAD_LOCAL: {
+        case CAS_THREAD_STACK: {
                 auto t = resolve<Thread>(cam->_id_table, u32_id(tid._u));
-                return t->_local_storage + address._v._offset; }
+                return at(*t, address._v._offset); }
         case CAS_BORROWED:
                 return resolve<void>(cam->_id_table, cam->_borrows[address._b._index]);
         default:
@@ -179,13 +179,12 @@ void cam_call(
 }
 
 cam_tid_t cam_thread_new(
-        struct cam_s *cam, int *out_ec, int stack_size,
-        cam_pid_t entry, cam_address_t *params, int arity)
+        struct cam_s *cam, int *out_ec, cam_pid_t entry, cam_address_t *params, int arity)
 {
-        int thread_sz = sizeof(Thread) + sizeof(void*)*CAM_MAX_PROVIDERS + stack_size;
+        int thread_sz = sizeof(Thread) + sizeof(void*)*CAM_MAX_PROVIDERS;
         auto ntp = general_allocator().allocate(thread_sz);
         cam_tid_t tid = { id_u32(make(cam->_id_table, ntp)) };
-        new (ntp) Thread(cam, tid, stack_size, entry, params, arity);
+        new (ntp) Thread(cam, tid, entry, params, arity);
         return tid;
 }
 
@@ -209,30 +208,28 @@ void cam_thread_resume(struct cam_s *cam, cam_tid_t tid)
         resume(*t);
 }
 
-void** cam_thread_tlpvs(struct cam_s *cam, cam_tid_t tid, int index)
+void* cam_thread_get_tlpvs(struct cam_s *cam, cam_tid_t tid, int index)
 {
-        CAM_ASSERT(index < CAM_MAX_PROVIDERS);
         auto t = resolve<Thread>(cam->_id_table, u32_id(tid._u));
-        return (void**)(t + 1) + index;
+        return t->_tlpvs[index];
+}
+
+void cam_thread_set_tlpvs(struct cam_s *cam, cam_tid_t tid, int index, void *state)
+{
+        auto t = resolve<Thread>(cam->_id_table, u32_id(tid._u));
+        t->_tlpvs[index] = state;
 }
 
 u8* cam_thread_push(struct cam_s *cam, cam_tid_t tid, int bytes, cam_address_t *out_address)
 {
         auto t = resolve<Thread>(cam->_id_table, u32_id(tid._u));
-        int old_size = t->_local_storage_n;
-        t->_local_storage_n += bytes;
-        CAM_ASSERT(t->_local_storage_n <= t->_stack_size);
-        out_address->_v._space  = CAS_THREAD_LOCAL;
-        out_address->_v._offset = old_size;
-        return t->_local_storage + old_size;
+        return push(*t, bytes, out_address);
 }
 
 u8* cam_thread_pop(struct cam_s *cam, cam_tid_t tid, int bytes)
 {
         auto t = resolve<Thread>(cam->_id_table, u32_id(tid._u));
-        t->_local_storage_n -= bytes;
-        CAM_ASSERT(t->_local_storage_n >= 0);
-        return t->_local_storage + t->_local_storage_n;
+        return pop(*t, bytes);
 }
 
 u8* cam_global_grow(struct cam_s *cam, int bytes, cam_address_t *out_address)

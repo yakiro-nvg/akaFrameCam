@@ -10,7 +10,7 @@ namespace akaFrame { namespace cam { namespace z390 {
 
 inline Z390Machine& machine(Z390Loader &loader, cam_tid_t tid)
 {
-        return *(Z390Machine*)*cam_thread_tlpvs(loader._cam, tid, loader._provider.index);
+        return *(Z390Machine*)cam_thread_get_tlpvs(loader._cam, tid, loader._provider.index);
 }
 
 static void stm(Z390Machine &m, u8 from, u8 to, u32 *save_area)
