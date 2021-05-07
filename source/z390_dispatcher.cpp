@@ -2,16 +2,12 @@
  * Unauthorized copying of this file, via any medium is strictly prohibited. */
 #include "z390_dispatcher.h"
 
-#include "common.h"
-#include "z390_machine.h"
+#include "z390_common.h"
 #include "z390_svc.h"
 
-namespace akaFrame { namespace cam { namespace z390 {
+using namespace akaFrame::cam::id_table;
 
-inline Z390Machine& machine(Z390Loader &loader, cam_tid_t tid)
-{
-        return *(Z390Machine*)cam_thread_get_tlpvs(loader._cam, tid, loader._provider.index);
-}
+namespace akaFrame { namespace cam { namespace z390 {
 
 static void stm(Z390Machine &m, u8 from, u8 to, u32 *save_area)
 {
@@ -50,7 +46,7 @@ static u32 ins_size(u8 opcode)
 }
 
 static u32 ins_a7xx(
-        Z390Loader &loader, cam_tid_t tid, Z390Machine &m, u8 *code)
+        Z390Loader &loader, cam_tid_t tid, Z390Machine &m, u8 *code, bool &stop_dispatch)
 {
         switch (code[1] & 0xf) {
         case 0x5: { // BRAS
@@ -66,7 +62,7 @@ static u32 ins_a7xx(
 }
 
 static u32 ins_lt_0x40(
-        Z390Loader &loader, cam_tid_t tid, Z390Machine &m, u8 *code)
+        Z390Loader &loader, cam_tid_t tid, Z390Machine &m, u8 *code, bool &stop_dispatch)
 {
         switch (code[0]) {
         case 0x05: { // BALR
@@ -79,7 +75,7 @@ static u32 ins_lt_0x40(
 
                 break; }
         case 0x0a: { // SVC
-                svc(loader, m, tid, code[1]);
+                svc(loader, m, tid, code[1], stop_dispatch);
                 break; }
         default:
                 CAM_ASSERT(!"not implemented");
@@ -90,14 +86,14 @@ static u32 ins_lt_0x40(
 }
 
 static u32 ins_lt_0x80(
-        Z390Loader &loader, cam_tid_t tid, Z390Machine &m, u8 *code)
+        Z390Loader &loader, cam_tid_t tid, Z390Machine &m, u8 *code, bool &stop_dispatch)
 {
         CAM_ASSERT(!"not implemented");
         return m.PC + ins_size(code[0]);
 }
 
 static u32 ins_lt_0xc0(
-        Z390Loader &loader, cam_tid_t tid, Z390Machine &m, u8 *code)
+        Z390Loader &loader, cam_tid_t tid, Z390Machine &m, u8 *code, bool &stop_dispatch)
 {
         switch (code[0]) {
         case 0x90: { // STM
@@ -115,7 +111,7 @@ static u32 ins_lt_0xc0(
                 stm(m, r1, r3, (u32*)save_area);
                 break; }
         case 0xa7:
-                return ins_a7xx(loader, tid, m, code);
+                return ins_a7xx(loader, tid, m, code, stop_dispatch);
         default:
                 CAM_ASSERT(!"not implemented");
                 break;
@@ -125,22 +121,23 @@ static u32 ins_lt_0xc0(
 }
 
 static u32 ins_lt_0xff(
-        Z390Loader &loader, cam_tid_t tid, Z390Machine &m, u8 *code)
+        Z390Loader &loader, cam_tid_t tid, Z390Machine &m, u8 *code, bool &stop_dispatch)
 {
         CAM_ASSERT(!"not implemented");
         return m.PC + ins_size(code[0]);
 }
 
-static void continue_execute(cam_s *cam, cam_tid_t tid)
+static void call_end(struct cam_s *cam, cam_tid_t tid, void *ktx)
 {
-        auto loader = thread_pop<Z390Loader*>(cam, tid);
-        dispatch(*loader, tid);
+        auto &m = *(Z390Machine*)ktx;
+        m.PC = m.R[14]; // continue at R14
 }
 
 void dispatch(Z390Loader &loader, cam_tid_t tid)
 {
-        auto &m = machine(loader, tid);
+        auto &m = get_machine(loader._cam, tid, loader._provider.index);
 
+        bool stop_dispatch = false;
         do {
                 auto pca = u32_address(m.PC);
                 if (pca._v._space == CAS_PROGRAM_ID) {
@@ -159,35 +156,33 @@ void dispatch(Z390Loader &loader, cam_tid_t tid)
                                 } while (true);
                         }
 
-                        thread_push(loader._cam, tid, &loader);
-                        cam_call(loader._cam, tid, { pca._u }, dps, arity, continue_execute);
-                        return; // to be continued...
-                }
-
-                u8 *code = (u8*)cam_address_buffer(loader._cam, u32_address(m.PC), tid);
-                if (code[0] == 0xff) { // returned
-                        // TODO: move to z390_program
-                        thread_pop<cam_k_t>(loader._cam, tid)(loader._cam, tid);
-                        cam_thread_pop(loader._cam, tid, 72 + 2);
-                        int arity = thread_pop<int>(loader._cam, tid);
-                        cam_thread_pop(loader._cam, tid, sizeof(cam_address_t)*arity);
-                        return;
-                }
-
-                if (code[0] < 0x80) {
-                        if (code[0] < 0x40) {
-                                m.PC = ins_lt_0x40(loader, tid, m, code);
-                        } else {
-                                m.PC = ins_lt_0x80(loader, tid, m, code);
-                        }
+                        cam_call(
+                                loader._cam, tid,
+                                { pca._u }, dps, arity,
+                                call_end, &m);
+                        stop_dispatch = true;
                 } else {
-                        if (code[0] < 0xc0) {
-                                m.PC = ins_lt_0xc0(loader, tid, m, code);
+                        u8 *code = (u8*)cam_address_buffer(loader._cam, u32_address(m.PC), tid);
+                        if (code[0] == 0xff) {
+                                cam_go_back(loader._cam, tid);
+                                stop_dispatch = true;
                         } else {
-                                m.PC = ins_lt_0xff(loader, tid, m, code);
+                                if (code[0] < 0x80) {
+                                        if (code[0] < 0x40) {
+                                                m.PC = ins_lt_0x40(loader, tid, m, code, stop_dispatch);
+                                        } else {
+                                                m.PC = ins_lt_0x80(loader, tid, m, code, stop_dispatch);
+                                        }
+                                } else {
+                                        if (code[0] < 0xc0) {
+                                                m.PC = ins_lt_0xc0(loader, tid, m, code, stop_dispatch);
+                                        } else {
+                                                m.PC = ins_lt_0xff(loader, tid, m, code, stop_dispatch);
+                                        }
+                                }
                         }
                 }
-        } while (true);
+        } while (!stop_dispatch);
 }
 
 }}} // namespace akaFrame.cam.z390

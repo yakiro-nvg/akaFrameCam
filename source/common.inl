@@ -37,17 +37,23 @@ u32 read_uint4b(const u8 *start)
 }
 
 template <typename T>
-cam_address_t thread_push(struct cam_s *cam, cam_tid_t tid, T value)
+cam_address_t push(struct cam_s *cam, cam_tid_t tid, T value)
 {
         cam_address_t address;
-        *((T*)cam_thread_push(cam, tid, sizeof(T), &address)) = value;
+        *((T*)cam_push(cam, tid, sizeof(T), &address)) = value;
         return address;
 }
 
 template <typename T>
-T thread_pop(struct cam_s *cam, cam_tid_t tid)
+T pop(struct cam_s *cam, cam_tid_t tid)
 {
-        return *(T*)cam_thread_pop(cam, tid, sizeof(T));
+        return *(T*)cam_pop(cam, tid, sizeof(T));
+}
+
+template <typename T>
+T& value(struct cam_s *cam, cam_tid_t tid, cam_address_t address)
+{
+        return *(T*)cam_address_buffer(cam, address, tid);
 }
 
 }} // namespace akaFrame.cam

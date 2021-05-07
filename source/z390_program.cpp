@@ -2,8 +2,7 @@
  * Unauthorized copying of this file, via any medium is strictly prohibited. */
 #include "z390_program.h"
 
-#include "common.h"
-#include "z390_machine.h"
+#include "z390_common.h"
 #include "z390_dispatcher.h"
 
 #define SAVE_AREA_BYTES 72
@@ -13,25 +12,9 @@ using namespace akaFrame::cam::id_table;
 
 namespace akaFrame { namespace cam { namespace z390 {
 
-inline Z390Program& from_pid(struct cam_s *cam, cam_pid_t pid)
-{
-        auto p = resolve<u8>(cam->_id_table, u32_id(pid._u));
-        return *(Z390Program*)(p - offsetof(Z390Program, _p));
-}
-
-inline Z390Loader& loader(Z390Program &p)
-{
-        return *(Z390Loader*)((u8*)p._p.provider - offsetof(Z390Loader, _provider));
-}
-
-inline Z390Machine& machine(Z390Program &p, cam_tid_t tid)
-{
-        return *(Z390Machine*)cam_thread_get_tlpvs(loader(p)._cam, tid, p._p.provider->index);
-}
-
 static void load(struct cam_s *cam, cam_pid_t pid)
 {
-        auto &p = from_pid(cam, pid);
+        auto &p = get_program(cam, pid);
         if (p._code._u != 0) {
                 return;
         } else {
@@ -44,19 +27,18 @@ static void load(struct cam_s *cam, cam_pid_t pid)
 }
 
 static void prepare(
-        struct cam_s *cam, cam_tid_t tid, cam_pid_t pid,
-        cam_address_t *params, int arity, cam_k_t k)
+        struct cam_s *cam, cam_tid_t tid, cam_pid_t pid, cam_address_t *params, int arity)
 {
         load(cam, pid);
 
-        auto &p = from_pid(cam, pid);
-        auto &m = machine(p, tid);
+        auto &p = get_program(cam, pid);
+        auto &m = get_machine(cam, tid, p._p.provider->index);
 
         m.PC = p._code._u;
 
         if (arity > 0) {
                 cam_address_t pa;
-                auto ps = (cam_address_t*)cam_thread_push(cam, tid, sizeof(cam_address_t)*arity, &pa);
+                auto ps = (cam_address_t*)cam_push(cam, tid, sizeof(cam_address_t)*arity, &pa);
                 memcpy(ps, params, sizeof(cam_address_t)*arity);
                 ps[arity - 1]._u |= 0x80000000; // set last param high bit
                 m.R[1] = pa._u;
@@ -64,21 +46,19 @@ static void prepare(
                 m.R[1] = 0;
         }
 
-        thread_push(cam, tid, arity);
+        push(cam, tid, arity);
 
         cam_address_t sa;
-        u8 *sap = cam_thread_push(cam, tid, SAVE_AREA_BYTES + 2, &sa);
+        u8 *sap = cam_push(cam, tid, SAVE_AREA_BYTES + 2, &sa);
         sap[0] = 0xff; // returned pseudo-opcode
         m.R[13] = sa._u + 2;
         m.R[14] = sa._u;
         m.R[15] = m.PC;
-
-        thread_push(cam, tid, k);
 }
 
 static void execute(struct cam_s *cam, cam_tid_t tid, cam_pid_t pid)
 {
-        dispatch(loader(from_pid(cam, pid)), tid);
+        dispatch(get_loader(get_program(cam, pid)._p.provider), tid);
 }
 
 Z390Program::Z390Program(cam_pid_t pid, cam_provider_t *provider)

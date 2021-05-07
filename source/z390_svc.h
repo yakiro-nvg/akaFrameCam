@@ -14,6 +14,7 @@ void                            svc                            (Z390Loader      
                                                               , Z390Machine            &m
                                                               , cam_tid_t               tid
                                                               , u8                      svc_id
+                                                              , bool                   &stop_dispatch
                                                                );
 
 }}} // namespace akaFrame.cam.z390

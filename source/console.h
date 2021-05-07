@@ -16,7 +16,6 @@ void                            write_prepare          (struct cam_s           *
                                                       , cam_pid_t               pid
                                                       , cam_address_t          *params
                                                       , int                     arity
-                                                      , cam_k_t                 k
                                                        );
 
 void                            write_execute          (struct cam_s           *cam

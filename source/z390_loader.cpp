@@ -3,9 +3,7 @@
 #include "z390_loader.h"
 
 #include <new>
-#include "memory.h"
-#include "id_table.h"
-#include "common.h"
+#include "z390_common.h"
 #include "z390_machine.h"
 #include <cam/version.h>
 
@@ -16,29 +14,24 @@ using namespace akaFrame::cam::z390::program;
 
 namespace akaFrame { namespace cam { namespace z390 {
 
-inline Z390Loader& from_provider(struct cam_provider_s *provider)
-{
-        return *(Z390Loader*)((u8*)provider - offsetof(Z390Loader, _provider));
-}
-
 static void t_entry(struct cam_provider_s *provider, cam_tid_t tid)
 {
-        auto &loader = from_provider(provider);
+        auto &loader = get_loader(provider);
         auto m = general_allocator().allocate(sizeof(Z390Machine));
         memset(m, 0, sizeof(Z390Machine));
-        cam_thread_set_tlpvs(loader._cam, tid, provider->index, m);
+        cam_set_tlpvs(loader._cam, tid, provider->index, m);
 }
 
 static void t_leave(struct cam_provider_s *provider, cam_tid_t tid)
 {
-        auto &loader = from_provider(provider);
-        auto m = cam_thread_get_tlpvs(loader._cam, tid, provider->index);
+        auto &loader = get_loader(provider);
+        auto m = cam_get_tlpvs(loader._cam, tid, provider->index);
         general_allocator().deallocate(m);
 }
 
 static cam_pid_t resolve(struct cam_provider_s *provider, const char *name)
 {
-        auto &loader = from_provider(provider);
+        auto &loader = get_loader(provider);
 
         for (int i= 0; i < size(loader._programs); ++i) {
                 auto &p = loader._programs[i];
@@ -92,7 +85,7 @@ int Z390Loader::load_chunk(const void *buff, int buff_size)
         for (int i = 0; i < (int)c.num_programs; ++i) {
                 auto npp = general_allocator().allocate(sizeof(Z390Program));
                 cam_pid_t pid = { id_u32(make(_cam->_id_table, npp)) };
-                auto np = new (npp) Z390Program(pid, &_provider); push(_programs, np);
+                auto np = new (npp) Z390Program(pid, &_provider); array::push(_programs, np);
                 bytes_taken += load(*np, (const ChunkProgram*)((const u8*)buff + bytes_taken));
         }
 

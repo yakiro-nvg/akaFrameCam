@@ -6,7 +6,7 @@
 #include <cam.h>
 #include "array.h"
 #include "loader.h"
-#include "thread.h"
+#include "task.h"
 #include "memory.h"
 #include "id_table.h"
 #include "program_table.h"
@@ -44,6 +44,12 @@ cam_s&                          operator=              (const cam_s            &
 
 namespace akaFrame { namespace cam {
 
+struct Continuation
+{
+        cam_k_t  k;
+        void    *ktx;
+};
+
 inline
 cam_address_t                   u32_address            (u32                     u
                                                        );
@@ -61,14 +67,20 @@ u32                             read_uint4b            (const u8               *
                                                        );
 
 template <typename T>
-cam_address_t                   thread_push            (struct cam_s           *cam
+cam_address_t                   push                   (struct cam_s           *cam
                                                       , cam_tid_t               tid
                                                       , T                       value
                                                        );
 
 template <typename T>
-T                               thread_pop             (struct cam_s           *cam
+T                               pop                    (struct cam_s           *cam
                                                       , cam_tid_t               tid
+                                                       );
+
+template <typename T>
+T&                              value                  (struct cam_s           *cam
+                                                      , cam_tid_t               tid
+                                                      , cam_address_t           address
                                                        );
 
 }} // namespace akaFrame.cam

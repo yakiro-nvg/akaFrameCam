@@ -12,10 +12,10 @@ extern "C" {
 struct cam_s;
 
 /// Address space.
-#define CAS_GLOBAL       0
-#define CAS_THREAD_STACK 1
-#define CAS_BORROWED     2
-#define CAS_PROGRAM_ID   3
+#define CAS_GLOBAL      0
+#define CAS_LOCAL_STACK 1
+#define CAS_BORROWED    2
+#define CAS_PROGRAM_ID  3
 
 #pragma pack(push, 1)
 typedef union cam_address_u {
@@ -55,6 +55,7 @@ typedef struct cam_tid_s {
 
 typedef void                  (*cam_k_t              ) (struct cam_s           *cam
                                                       , cam_tid_t               tid
+                                                      , void                   *ktx
                                                        );
 
 typedef struct cam_provider_s {
@@ -85,7 +86,6 @@ typedef struct cam_program_s {
                                                       , cam_pid_t               pid
                                                       , cam_address_t          *params
                                                       , int                     arity
-                                                      , cam_k_t                 k
                                                        );
 
         void                  (*execute              ) (struct cam_s           *cam
@@ -161,6 +161,7 @@ CAM_API
 /// A no-op continuation.
 void                            cam_nop_k              (struct cam_s           *cam
                                                       , cam_tid_t               tid
+                                                      , void                   *ktx
                                                        );
 
 CAM_API
@@ -171,62 +172,78 @@ void                            cam_call               (struct cam_s           *
                                                       , cam_address_t          *params
                                                       , int                     arity
                                                       , cam_k_t                 k
+                                                      , void                   *ktx
                                                        );
 
 CAM_API
-/// Creates a logical (green) thread, cooperative scheduled.
-cam_tid_t                       cam_thread_new         (struct cam_s           *cam
+/// Goes back to the calling program.
+void                            cam_go_back            (struct cam_s           *cam
+                                                      , cam_tid_t               tid
+                                                       );
+
+CAM_API
+/// Creates a logical (green) task, cooperative scheduled with a finalizer `k`.
+cam_tid_t                       cam_task_new           (struct cam_s           *cam
                                                       , int                    *out_ec
                                                       , cam_pid_t               entry
                                                       , cam_address_t          *params
                                                       , int                     arity
+                                                      , cam_k_t                 k
+                                                      , void                   *ktx
                                                        );
 
 CAM_API
-/// Releases allocated resources and deletes the thread.
-void                            cam_thread_delete      (struct cam_s           *cam
+/// Releases allocated resources and deletes the task.
+void                            cam_task_delete        (struct cam_s           *cam
                                                       , cam_tid_t               tid
                                                        );
 
 CAM_API
-/// Yields `thread` with a continuation `k`.
-void                            cam_thread_yield       (struct cam_s           *cam
+/// Returns top program (last activation record).
+cam_pid_t                       cam_top_program        (struct cam_s           *cam
+                                                      , cam_tid_t               tid
+                                                       );
+
+CAM_API
+/// Yields with a continuation `k`.
+void                            cam_yield              (struct cam_s           *cam
                                                       , cam_tid_t               tid
                                                       , cam_k_t                 k
+                                                      , void                   *ktx
                                                        );
 
 CAM_API
-/// Starts or resumes `thread`, returns when the thread suspends or finishes its execution.
-void                            cam_thread_resume      (struct cam_s           *cam
+/// Starts or resumes, returns when the task suspends or finishes its execution.
+void                            cam_resume             (struct cam_s           *cam
                                                       , cam_tid_t               tid
                                                        );
 
 CAM_API
-/// Gets thread local provider state at given `index`.
-void*                           cam_thread_get_tlpvs   (struct cam_s           *cam
+/// Gets provider (at given `index`) state on local stack.
+void*                           cam_get_tlpvs          (struct cam_s           *cam
                                                       , cam_tid_t               tid
                                                       , int                     index
                                                        );
 
 CAM_API
-/// Gets thread local provider state at given `index`.
-void                            cam_thread_set_tlpvs   (struct cam_s           *cam
+/// Sets provider (at given `index`) state on local stack.
+void                            cam_set_tlpvs          (struct cam_s           *cam
                                                       , cam_tid_t               tid
                                                       , int                     index
                                                       , void                   *state
                                                        );
 
 CAM_API
-/// Resizes the thread stack so it contains more `bytes`, returns previous top.
-u8*                             cam_thread_push        (struct cam_s           *cam
+/// Resizes the local stack so it contains more `bytes`, returns previous top.
+u8*                             cam_push               (struct cam_s           *cam
                                                       , cam_tid_t               tid
                                                       , int                     bytes
                                                       , cam_address_t          *out_address
                                                        );
 
 CAM_API
-/// Resizes the thread stack so it contains less `bytes`, returns next top.
-u8*                             cam_thread_pop         (struct cam_s           *cam
+/// Resizes the local stack so it contains less `bytes`, returns next top.
+u8*                             cam_pop                (struct cam_s           *cam
                                                       , cam_tid_t               tid
                                                       , int                     bytes
                                                        );
@@ -246,7 +263,7 @@ bool                            cam_is_alive_program   (struct cam_s           *
 
 CAM_API
 /// Checks whether given id is alive.
-bool                            cam_is_alive_thread    (struct cam_s           *cam
+bool                            cam_is_alive_task      (struct cam_s           *cam
                                                       , cam_tid_t               tid
                                                        );
 

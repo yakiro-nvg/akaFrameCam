@@ -8,7 +8,7 @@
 using namespace akaFrame::cam;
 using namespace akaFrame::cam::mem;
 using namespace akaFrame::cam::array;
-using namespace akaFrame::cam::thread;
+using namespace akaFrame::cam::task;
 using namespace akaFrame::cam::id_table;
 using namespace akaFrame::cam::program_table;
 
@@ -138,8 +138,8 @@ void* cam_address_buffer(struct cam_s *cam, cam_address_t address, cam_tid_t tid
         switch (address._v._space) {
         case CAS_GLOBAL:
                 return &cam->_global_buffer[address._v._offset];
-        case CAS_THREAD_STACK: {
-                auto t = resolve<Thread>(cam->_id_table, u32_id(tid._u));
+        case CAS_LOCAL_STACK: {
+                auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
                 return at(*t, address._v._offset); }
         case CAS_BORROWED:
                 return resolve<void>(cam->_id_table, cam->_borrows[address._b._index]);
@@ -164,71 +164,83 @@ cam_pid_t cam_resolve(struct cam_s *cam, const char *name)
         return { 0 }; // not found
 }
 
-void cam_nop_k(struct cam_s *cam, cam_tid_t tid)
+void cam_nop_k(struct cam_s *, cam_tid_t, void *)
 {
         // nop
 }
 
 void cam_call(
         struct cam_s *cam, cam_tid_t tid, cam_pid_t pid,
-        cam_address_t *params, int arity, cam_k_t k)
+        cam_address_t *params, int arity, cam_k_t k, void *ktx)
 {
-        id_t id = u32_id(tid._u);
-        auto t = resolve<Thread>(cam->_id_table, id);
-        call(*t, pid, params, arity, k);
+        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
+        call(*t, pid, params, arity, k, ktx);
 }
 
-cam_tid_t cam_thread_new(
-        struct cam_s *cam, int *out_ec, cam_pid_t entry, cam_address_t *params, int arity)
+void cam_go_back(struct cam_s *cam, cam_tid_t tid)
 {
-        int thread_sz = sizeof(Thread) + sizeof(void*)*CAM_MAX_PROVIDERS;
-        auto ntp = general_allocator().allocate(thread_sz);
+        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
+        go_back(*t);
+}
+
+cam_tid_t cam_task_new(
+        struct cam_s *cam, int *out_ec, cam_pid_t entry,
+        cam_address_t *params, int arity, cam_k_t k, void *ktx)
+{
+        int task_size = sizeof(Task) + sizeof(void*)*CAM_MAX_PROVIDERS;
+        auto ntp = general_allocator().allocate(task_size);
         cam_tid_t tid = { id_u32(make(cam->_id_table, ntp)) };
-        new (ntp) Thread(cam, tid, entry, params, arity);
+        new (ntp) Task(cam, tid, entry, params, arity, k, ktx);
         return tid;
 }
 
-void cam_thread_delete(struct cam_s *cam, cam_tid_t tid)
+void cam_task_delete(struct cam_s *cam, cam_tid_t tid)
 {
-        auto t = resolve<Thread>(cam->_id_table, u32_id(tid._u));
-        t->~Thread(); general_allocator().deallocate(t);
+        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
+        t->~Task(); general_allocator().deallocate(t);
 }
 
-void cam_thread_yield(struct cam_s *cam, cam_tid_t tid, cam_k_t k)
+cam_pid_t cam_top_program(struct cam_s *cam, cam_tid_t tid)
 {
-        id_t id = u32_id(tid._u);
-        auto t = resolve<Thread>(cam->_id_table, id);
-        yield(*t, k);
+        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
+        return top_program(*t);
 }
 
-void cam_thread_resume(struct cam_s *cam, cam_tid_t tid)
+void cam_yield(struct cam_s *cam, cam_tid_t tid, cam_k_t k, void *ktx)
 {
         id_t id = u32_id(tid._u);
-        auto t = resolve<Thread>(cam->_id_table, id);
+        auto t = resolve<Task>(cam->_id_table, id);
+        yield(*t, k, ktx);
+}
+
+void cam_resume(struct cam_s *cam, cam_tid_t tid)
+{
+        id_t id = u32_id(tid._u);
+        auto t = resolve<Task>(cam->_id_table, id);
         resume(*t);
 }
 
-void* cam_thread_get_tlpvs(struct cam_s *cam, cam_tid_t tid, int index)
+void* cam_get_tlpvs(struct cam_s *cam, cam_tid_t tid, int index)
 {
-        auto t = resolve<Thread>(cam->_id_table, u32_id(tid._u));
+        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
         return t->_tlpvs[index];
 }
 
-void cam_thread_set_tlpvs(struct cam_s *cam, cam_tid_t tid, int index, void *state)
+void cam_set_tlpvs(struct cam_s *cam, cam_tid_t tid, int index, void *state)
 {
-        auto t = resolve<Thread>(cam->_id_table, u32_id(tid._u));
+        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
         t->_tlpvs[index] = state;
 }
 
-u8* cam_thread_push(struct cam_s *cam, cam_tid_t tid, int bytes, cam_address_t *out_address)
+u8* cam_push(struct cam_s *cam, cam_tid_t tid, int bytes, cam_address_t *out_address)
 {
-        auto t = resolve<Thread>(cam->_id_table, u32_id(tid._u));
+        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
         return push(*t, bytes, out_address);
 }
 
-u8* cam_thread_pop(struct cam_s *cam, cam_tid_t tid, int bytes)
+u8* cam_pop(struct cam_s *cam, cam_tid_t tid, int bytes)
 {
-        auto t = resolve<Thread>(cam->_id_table, u32_id(tid._u));
+        auto t = resolve<Task>(cam->_id_table, u32_id(tid._u));
         return pop(*t, bytes);
 }
 
@@ -247,7 +259,7 @@ bool cam_is_alive_program(struct cam_s *cam, cam_pid_t pid)
         return resolve<void>(cam->_id_table, u32_id(pid._u)) != nullptr;
 }
 
-bool cam_is_alive_thread(struct cam_s *cam, cam_tid_t tid)
+bool cam_is_alive_task(struct cam_s *cam, cam_tid_t tid)
 {
         return resolve<void>(cam->_id_table, u32_id(tid._u)) != nullptr;
 }
