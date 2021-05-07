@@ -61,6 +61,7 @@ cam_address_t make(IdTable &t, void *address)
         r._in_use = true; r._v._iu._p = address;
 
         cam_address_t id;
+        id._u = 0;
         id._v._space      = CAS_ID;
         id._i._index      = idx;
         id._i._generation = r._generation;
