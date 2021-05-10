@@ -1,7 +1,4 @@
 #include <cam.h>
-#include <libcob.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "ASMMIXA1.cam.h"
 #include "ASMMIXA6.cam.h"
