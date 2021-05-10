@@ -23,7 +23,6 @@ Z390Program&                    operator=              (const Z390Program      &
         cam_pid_t           _pid;
         const ChunkProgram *_chunk;
         const char         *_name;
-        u32                *_text_offsets;
         cam_address_t       _code;
 };
 

@@ -22,6 +22,10 @@ Z390Machine&                    get_machine            (struct cam_s           *
                                                        );
 
 inline
+Z390Program&                    get_program            (cam_program_t          *program
+                                                       );
+
+inline
 Z390Program&                    get_program            (struct cam_s           *cam
                                                       , cam_pid_t               pid
                                                        );

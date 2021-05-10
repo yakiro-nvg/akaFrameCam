@@ -14,8 +14,7 @@ struct cam_s;
 /// Address space.
 #define CAS_GLOBAL      0
 #define CAS_LOCAL_STACK 1
-#define CAS_BORROWED    2
-#define CAS_ID          3
+#define CAS_ID          2
 
 #pragma pack(push, 1)
 typedef union cam_address_u {
@@ -29,18 +28,7 @@ typedef union cam_address_u {
                 u32 _space  : 2;
                 u32 _       : 1;
 #endif
-        } _v; // CAS_GLOBAL or CAS_LOCAL_STACK
-        struct {
-#if SX_CPU_ENDIAN_BIG
-                u32 _       : 3;
-                u32 _index  : 4;
-                u32 _offset : 25;
-#else
-                u32 _offset : 25;
-                u32 _index  : 4;
-                u32 _       : 3;
-#endif
-        } _b; // CAS_BORROWED
+        } _v;
         struct {
 #if SX_CPU_ENDIAN_BIG
                 u32 _           : 3;
@@ -71,6 +59,7 @@ typedef void                  (*cam_k_t              ) (struct cam_s           *
 
 typedef struct cam_provider_s {
         int                     index;
+        char                    name[4];
 
         void                  (*t_entry              ) (struct cam_provider_s  *provider
                                                       , cam_tid_t               tid
@@ -139,7 +128,6 @@ CAM_API
 /// Makes an address that pointed to given `buff`.
 cam_error_t                     cam_address_make       (struct cam_s           *cam
                                                       , void                   *buff
-                                                      , bool                    borrow
                                                       , cam_address_t          *out_address
                                                        );
 
@@ -157,7 +145,7 @@ void*                           cam_address_buffer     (struct cam_s           *
                                                        );
 
 CAM_API
-/// Searches for a `name`d program.
+/// Searches for a `name`d program, returns NULL if not found.
 cam_pid_t                       cam_resolve            (struct cam_s           *cam
                                                       , const char             *name
                                                        );
@@ -258,18 +246,6 @@ CAM_API
 u8*                             cam_global_grow        (struct cam_s           *cam
                                                       , int                     bytes
                                                       , cam_address_t          *out_address
-                                                       );
-
-CAM_API
-/// Checks whether given id is alive.
-bool                            cam_is_alive_program   (struct cam_s           *cam
-                                                      , cam_pid_t               pid
-                                                       );
-
-CAM_API
-/// Checks whether given id is alive.
-bool                            cam_is_alive_task      (struct cam_s           *cam
-                                                      , cam_tid_t               tid
                                                        );
 
 #ifdef __cplusplus

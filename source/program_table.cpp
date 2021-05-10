@@ -50,6 +50,8 @@ static void add_standard_libs(ProgramTable &pt)
 ProgramTable::ProgramTable(struct cam_s *cam)
         : _cam(cam)
 {
+        _provider.name[0] = 'P'; _provider.name[1] = 'T';
+        _provider.name[2] = 'B'; _provider.name[3] = 'L';
         _provider.t_entry = t_entry;
         _provider.t_leave = t_leave;
         _provider.resolve = resolve;

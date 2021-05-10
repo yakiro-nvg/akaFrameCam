@@ -35,8 +35,6 @@ cam_s::cam_s()
         , _z390(nullptr)
 #endif
 {
-        memset(_borrows, 0, sizeof(_borrows));
-
         void *ptp = general_allocator().allocate(sizeof(ProgramTable));
         _program_table = new (ptp) ProgramTable(this);
         cam_add_provider(this, provider(*_program_table));
@@ -46,12 +44,6 @@ cam_s::cam_s()
 
 cam_s::~cam_s()
 {
-        for (auto id : _borrows) {
-                if (id._u != 0) {
-                        drop(_id_table, id);
-                }
-        }
-
         _program_table->~ProgramTable();
         general_allocator().deallocate(_program_table);
 
@@ -101,37 +93,16 @@ cam_error_t cam_load_chunk(struct cam_s *cam, const void *buff, int buff_size)
         return CEC_NOT_SUPPORTED; // not recognized
 }
 
-cam_error_t cam_address_make(struct cam_s *cam, void *buff, bool borrow, cam_address_t *out_address)
+cam_error_t cam_address_make(struct cam_s *cam, void *buff, cam_address_t *out_address)
 {
-        if (borrow) {
-                int num_borrows = sizeof(cam->_borrows) / sizeof(cam->_borrows[0]);
-
-                for (auto &id : cam->_borrows) {
-                        if (id._u == 0) {
-                                id = make(cam->_id_table, buff);
-                                out_address->_u = 0;
-                                out_address->_v._space  = CAS_BORROWED;
-                                out_address->_b._index  = &id - cam->_borrows;
-                                out_address->_b._offset = 0;
-                                return CEC_SUCCESS;
-                        }
-                }
-
-                return CEC_NO_MEMORY;
-        } else {
-                *out_address = make(cam->_id_table, buff);
-                return CEC_SUCCESS;
-        }
+        *out_address = make(cam->_id_table, buff);
+        return CEC_SUCCESS;
 }
 
 void cam_address_drop(struct cam_s *cam, cam_address_t address)
 {
-        if (address._v._space == CAS_BORROWED) {
-                drop(cam->_id_table, cam->_borrows[address._b._index]);
-        } else {
-                CAM_ASSERT(address._v._space == CAS_ID);
-                drop(cam->_id_table, address);
-        }
+        CAM_ASSERT(address._v._space == CAS_ID);
+        drop(cam->_id_table, address);
 }
 
 void* cam_address_buffer(struct cam_s *cam, cam_address_t address, cam_tid_t tid)
@@ -142,8 +113,6 @@ void* cam_address_buffer(struct cam_s *cam, cam_address_t address, cam_tid_t tid
         case CAS_LOCAL_STACK: {
                 auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
                 return at(*t, address._v._offset); }
-        case CAS_BORROWED:
-                return resolve<void>(cam->_id_table, cam->_borrows[address._b._index]);
         case CAS_ID:
                 return resolve<void>(cam->_id_table, address);
         default:
@@ -164,7 +133,7 @@ cam_pid_t cam_resolve(struct cam_s *cam, const char *name)
                 }
         }
 
-        return { 0 }; // not found
+        return { 0 }; // found found
 }
 
 void cam_nop_k(struct cam_s *, cam_tid_t, void *)
@@ -257,14 +226,4 @@ u8* cam_global_grow(struct cam_s *cam, int bytes, cam_address_t *out_address)
         out_address->_v._space  = CAS_GLOBAL;
         out_address->_v._offset = old_size;
         return cam->_global_buffer + old_size;
-}
-
-bool cam_is_alive_program(struct cam_s *cam, cam_pid_t pid)
-{
-        return resolve<void>(cam->_id_table, u32_address(pid._u)) != nullptr;
-}
-
-bool cam_is_alive_task(struct cam_s *cam, cam_tid_t tid)
-{
-        return resolve<void>(cam->_id_table, u32_address(tid._u)) != nullptr;
 }

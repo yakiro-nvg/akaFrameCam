@@ -4,3 +4,6 @@
 [submodule "vendor/Catch2"]
 	path = vendor/Catch2
 	url = https://github.com/catchorg/Catch2.git
+[submodule "vendor/variant"]
+	path = vendor/variant
+	url = https://github.com/mapbox/variant.git

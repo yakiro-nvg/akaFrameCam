@@ -12,10 +12,15 @@ Z390Machine& get_machine(struct cam_s *cam, cam_tid_t tid, int index)
         return *(Z390Machine*)cam_get_tlpvs(cam, tid, index);
 }
 
+Z390Program& get_program(cam_program_t *program)
+{
+        return *(Z390Program*)(program - offsetof(Z390Program, _p));
+}
+
 Z390Program& get_program(struct cam_s *cam, cam_pid_t pid)
 {
         auto p = id_table::resolve<u8>(cam->_id_table, u32_address(pid._u));
-        return *(Z390Program*)(p - offsetof(Z390Program, _p));
+        return get_program((cam_program_t*)p);
 }
 
 }}} // namespace akaFrame.cam.z390

@@ -19,9 +19,22 @@ static void load(struct cam_s *cam, cam_pid_t pid)
                 return;
         } else {
                 u8 *ws = cam_global_grow(cam, p._chunk->size, &p._code);
+                int bytes_taken = sizeof(ChunkProgram) + p._chunk->name_size;
+                
                 for (int i = 0; i < (int)p._chunk->num_texts; ++i) {
-                        auto txt = (const ChunkProgramText*)((const u8*)p._chunk + p._text_offsets[i]);
+                        auto txt = (const ChunkProgramText*)((const u8*)p._chunk + bytes_taken);
                         memcpy(ws + txt->address, txt + 1, txt->size);
+                        bytes_taken += sizeof(ChunkProgramText) + txt->size;
+                }
+
+                for (int i = 0; i < (int)p._chunk->num_externals; ++i) {
+                        auto ext = (const ChunkProgramExternal*)((const u8*)p._chunk + bytes_taken);
+                        bytes_taken += sizeof(ChunkProgramExternal) + ext->name_size;
+                        auto address = (cam_address_t*)(ws + ext->address);
+                        auto name = (const char*)(ext + 1);
+                        auto pid = cam_resolve(cam, name);
+                        CAM_ASSERT(pid._u != 0 && "unresolved program");
+                        save_uint4b(address, pid._u);
                 }
         }
 }
@@ -34,7 +47,7 @@ static void prepare(
         auto &p = get_program(cam, pid);
         auto &m = get_machine(cam, tid, p._p.provider->index);
 
-        m.PC = p._code._u;
+        m.PC = p._code._u + p._chunk->entry;
 
         if (arity > 0) {
                 cam_address_t pa;
@@ -65,7 +78,6 @@ Z390Program::Z390Program(cam_pid_t pid, cam_provider_t *provider)
         : _pid(pid)
         , _chunk(nullptr)
         , _name(nullptr)
-        , _text_offsets(nullptr)
         , _code({ 0 })
 {
         _p.provider = provider;
@@ -83,15 +95,19 @@ namespace program {
 
 int load(Z390Program &program, const ChunkProgram *chunk)
 {
-        int bytes_taken = sizeof(ChunkProgram) + chunk->name_size + sizeof(u32)*chunk->num_texts;
+        int bytes_taken = sizeof(ChunkProgram) + chunk->name_size;
 
-        program._chunk        = chunk;
-        program._name         = (const char*)(chunk + 1);
-        program._text_offsets = (u32*)(program._name + chunk->name_size);
+        program._chunk = chunk;
+        program._name  = (const char*)(chunk + 1);
 
         for (int i = 0; i < (int)chunk->num_texts; ++i) {
-                auto txt = (const ChunkProgramText*)((const u8*)chunk + program._text_offsets[i]);
+                auto txt = (const ChunkProgramText*)((const u8*)chunk + bytes_taken);
                 bytes_taken += sizeof(ChunkProgramText) + txt->size;
+        }
+
+        for (int i = 0; i < (int)chunk->num_externals; ++i) {
+                auto ext = (const ChunkProgramExternal*)((const u8*)chunk + bytes_taken);
+                bytes_taken += sizeof(ChunkProgramExternal) + ext->name_size;
         }
 
         return bytes_taken;

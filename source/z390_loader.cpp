@@ -45,8 +45,8 @@ static cam_pid_t resolve(struct cam_provider_s *provider, const char *name)
 
 static bool verify_chunk_header(const Chunk &c)
 {
-        return c.signature[0] == 'C' && c.signature[1] == '@' &&
-               c.signature[2] == 'M' && c.signature[3] == '#' &&
+        return c.signature[0] == 'C' && c.signature[1] == 'A' &&
+               c.signature[2] == 'M' && c.signature[3] == '@' &&
                c.type[0] == 'Z' && c.type[1] == '3' && c.type[2] == '9' && c.type[3] == '0' &&
                c.ver_major == CAM_VER_MAJOR && c.ver_minor == CAM_VER_MINOR && c.ver_patch == CAM_VER_PATCH &&
 #if SZ_CPU_ENDIAN_BIG
@@ -60,6 +60,8 @@ Z390Loader::Z390Loader(struct cam_s *cam)
         : _cam(cam)
         , _programs(page_allocator())
 {
+        _provider.name[0] = 'Z'; _provider.name[1] = '3';
+        _provider.name[2] = '9'; _provider.name[3] = '0';
         _provider.t_entry = t_entry;
         _provider.t_leave = t_leave;
         _provider.resolve = resolve;

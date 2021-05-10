@@ -9,6 +9,11 @@ cam_address_t u32_address(u32 u)
         return a;
 }
 
+bool is_provider(cam_provider_t *provider, const char *name)
+{
+        return memcmp(provider->name, name, 4) == 0;
+}
+
 u32 load_uint2b(const void *start)
 {
         auto s = (const u8*)start;

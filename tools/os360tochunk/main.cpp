@@ -1,12 +1,13 @@
 /* Copyright (c) 2021 FPT Software - All Rights Reserved. Proprietary.
  * Unauthorized copying of this file, via any medium is strictly prohibited. */
+#include <map>
+#include <string>
+#include <vector>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <algorithm>
-#include <string>
-#include <vector>
-#include <map>
+#include <mapbox/variant.hpp>
 
 #include <cam/platform.h>
 #include <cam/version.h>
@@ -18,6 +19,7 @@ enum { ALIGNMENT = 4 };
 using namespace std;
 using namespace akaFrame::cam;
 using namespace akaFrame::cam::z390;
+using namespace mapbox::util;
 
 enum class EsdType
 {
@@ -33,12 +35,33 @@ struct Text
         u32 address, size;
 };
 
-struct Program
+struct Relocation
+{
+        u32 xesd_id;
+        u32  esd_id;
+        u32 address;
+};
+
+struct External
+{
+        string name;
+        u32 address;
+};
+
+struct SdProgram
 {
         string name;
         u32 entry, size;
         vector<Text> texts;
+        vector<External> externals;
 };
+
+struct ErProgram
+{
+        string name;
+};
+
+typedef variant<SdProgram, ErProgram> Program;
 
 static string filename_wo_ext(const char *filename)
 {
@@ -97,8 +120,8 @@ static const char EBCDIC_TO_ASCII[] = {
 static bool write_chunk_header(FILE *outf, int num_programs)
 {
         Chunk c;
-        c.signature[0] = 'C'; c.signature[1] = '@';
-        c.signature[2] = 'M'; c.signature[3] = '#';
+        c.signature[0] = 'C'; c.signature[1] = 'A';
+        c.signature[2] = 'M'; c.signature[3] = '@';
         c.type[0] = 'Z'; c.type[1] = '3'; c.type[2] = '9'; c.type[3] = '0';
         c.ver_major = CAM_VER_MAJOR; c.ver_minor = CAM_VER_MINOR; c.ver_patch = CAM_VER_PATCH;
 #if SZ_CPU_ENDIAN_BIG
@@ -110,24 +133,10 @@ static bool write_chunk_header(FILE *outf, int num_programs)
 
         size_t r = fwrite(&c, sizeof(c), 1, outf);
         if (r != 1) {
-                printf("failed to write chunk header");
+                printf("failed to write chunk header\n");
                 return false;
         }
 
-        return true;
-}
-
-static bool write_chunk_program_text_offset(FILE *outf, const Text &t, u32 &offset)
-{
-        size_t r;
-
-        r = fwrite(&offset, sizeof(u32), 1, outf);
-        if (r != 1) {
-                printf("failed to write chunk text offset");
-                return false;
-        }
-
-        offset += sizeof(ChunkProgramText) + t.size;
         return true;
 }
 
@@ -140,28 +149,58 @@ static bool write_chunk_program_text(FILE *outf, const Text &t)
         ct.size    = t.size;
         r = fwrite(&ct, sizeof(ct), 1, outf);
         if (r != 1) {
-                printf("failed to write chunk text");
+                printf("failed to write chunk program text\n");
                 return false;
         }
 
         r = fwrite(t.code, 1, t.size, outf);
         if (r != t.size) {
-                printf("failed to write chunk text code");
+                printf("failed to write chunk program text code\n");
                 return false;
         }
 
         return true;
 }
 
-static bool write_chunk_program(FILE *outf, const Program &p)
+static bool write_chunk_program_external(FILE *outf, const External &e)
+{
+        size_t r;
+
+        ChunkProgramExternal ce;
+        ce.name_size = align_forward((int)e.name.length() + 1);
+        ce.address   = e.address;
+        r = fwrite(&ce, sizeof(ce), 1, outf);
+        if (r != 1) {
+                printf("failed to write chunk program external\n");
+                return false;
+        }
+
+        r = fwrite(e.name.c_str(), 1, e.name.length(), outf);
+        if (r != e.name.length()) {
+                printf("failed to write chunk program external name");
+                return false;
+        }
+
+        static char ZERO[ALIGNMENT] = { 0 };
+        r = fwrite(ZERO, ce.name_size - e.name.length(), 1, outf);
+        if (r != 1) {
+                printf("failed to write chunk program external name padding");
+                return false;
+        }
+
+        return true;
+}
+
+static bool write_chunk_program(FILE *outf, const SdProgram &p)
 {
         size_t r;
 
         ChunkProgram cp;
-        cp.entry     = p.entry;
-        cp.size      = p.size;
-        cp.name_size = align_forward((int)p.name.length() + 1);
-        cp.num_texts = (int)p.texts.size();
+        cp.entry         = p.entry;
+        cp.size          = p.size;
+        cp.name_size     = align_forward((int)p.name.length() + 1);
+        cp.num_texts     = (int)p.texts.size();
+        cp.num_externals = (int)p.externals.size();
         r = fwrite(&cp, sizeof(cp), 1, outf);
         if (r != 1) {
                 printf("failed to write chunk program");
@@ -181,17 +220,16 @@ static bool write_chunk_program(FILE *outf, const Program &p)
                 return false;
         }
 
-        u32 text_offset = sizeof(ChunkProgram) + cp.name_size + sizeof(u32)*cp.num_texts;
         for (int i = 0; i < (int)p.texts.size(); ++i) {
                 auto &t = p.texts[i];
-                if (!write_chunk_program_text_offset(outf, t, text_offset)) {
+                if (!write_chunk_program_text(outf, t)) {
                         return false;
                 }
         }
 
-        for (int i = 0; i < (int)p.texts.size(); ++i) {
-                auto &t = p.texts[i];
-                if (!write_chunk_program_text(outf, t)) {
+        for (int i = 0; i < (int)p.externals.size(); ++i) {
+                auto &e = p.externals[i];
+                if (!write_chunk_program_external(outf, e)) {
                         return false;
                 }
         }
@@ -207,7 +245,9 @@ static bool to_chunk(const uint8_t *obj, int obj_size, FILE *outf)
         }
 
         map<u32, Program> programs;
+        vector<Relocation> relocations;
 
+        // parse records
         for (int i = 0; i < obj_size; i += 80) {
                 const auto record_num = i / 80 + 1;
                 auto line = obj + i;
@@ -233,15 +273,19 @@ static bool to_chunk(const uint8_t *obj, int obj_size, FILE *outf)
                         auto type = (EsdType)line[24];
                         switch (type) {
                         case EsdType::SD: {
-                                auto &p = programs[esd_id];
+                                SdProgram p;
                                 p.name  = esd_name;
                                 p.entry = load_uint3b(line + 25);
                                 p.size  = load_uint3b(line + 29);
+                                programs[esd_id] = p;
                                 break; }
                         case EsdType::LD:
                                 break;
-                        case EsdType::ER:
-                                break;
+                        case EsdType::ER: {
+                                ErProgram p;
+                                p.name  = esd_name;
+                                programs[esd_id] = p;
+                                break; }
                         case EsdType::WX:
                                 break;
                         default:
@@ -254,7 +298,7 @@ static bool to_chunk(const uint8_t *obj, int obj_size, FILE *outf)
                         if (pitr == programs.end()) {
                                 printf("record #%0x8d: undefined ESD 0x%02x\n", record_num, esd_id);
                         }
-                        auto &p = pitr->second;
+                        auto &p = pitr->second.get<SdProgram>();
 
                         Text txt;
                         txt.code    = line + 16;
@@ -263,19 +307,50 @@ static bool to_chunk(const uint8_t *obj, int obj_size, FILE *outf)
                         p.texts.push_back(txt);
                 } else if (c1 == 'E' && c2 == 'N' && c3 == 'D') {
                         // nop
+                } else if (c1 == 'R' && c2 == 'L' && c3 == 'D') {
+                        u32 xesd_id = load_uint2b(line + 16);
+                        u32  esd_id = load_uint2b(line + 18);
+                        u8  sign    = ((line[20] >> 1) & 0x1);
+                        u8  rld_len = ((line[20] >> 2) & 0x3) + 1;
+                        u8  adcon   = ((line[20] >> 4) & 0x3);
+                        u32 address = load_uint3b(line + 21);
+                        if (sign != 0 || rld_len != 4 || adcon != 0) {
+                                printf("record #%0x8d: only 4-bytes A type address constant supported\n", record_num);
+                                return false;
+                        }
+
+                        relocations.push_back({ xesd_id, esd_id, address });
                 } else {
                         printf("unknown record type '%c%c%c'\n", c1, c2, c3);
                         return false;
                 }
         }
 
-        if (!write_chunk_header(outf, (int)programs.size())) {
+        // resolve externals
+        for (auto &rld : relocations) {
+                auto xesd_itr = programs.find(rld.xesd_id);
+                auto  esd_itr = programs.find(rld. esd_id);
+                if (xesd_itr == programs.end() || esd_itr == programs.end()) {
+                        printf("bad relocation, esd not found\n");
+                        return false;
+                }
+
+                auto &erp = xesd_itr->second.get<ErProgram>();
+                auto &sdp =  esd_itr->second.get<SdProgram>();
+                sdp.externals.push_back({ erp.name, rld.address });
+        }
+
+        if (!write_chunk_header(
+                outf, (int)count_if(programs.begin(), programs.end(),
+                                    [](auto &itr) { return itr.second.is<SdProgram>(); }))) {
                 return false;
         }
 
-        for (auto itr = programs.begin(); itr != programs.end(); ++itr) {
-                if (!write_chunk_program(outf, itr->second)) {
-                        return false;
+        for (auto &itr : programs) {
+                if (itr.second.is<SdProgram>()) {
+                        if (!write_chunk_program(outf, itr.second.get<SdProgram>())) {
+                                return false;
+                        }
                 }
         }
 

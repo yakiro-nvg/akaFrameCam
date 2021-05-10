@@ -35,7 +35,6 @@ cam_s&                          operator=              (const cam_s            &
         int                                           _providers_n;
         u8                                            _global_buffer[CAM_MAX_GLOBAL];
         int                                           _global_buffer_n;
-        cam_address_t                                 _borrows[256];
         akaFrame::cam::ProgramTable                  *_program_table;
 #ifdef CAM_Z390
         akaFrame::cam::z390::Z390Loader              *_z390;
@@ -52,6 +51,11 @@ struct Continuation
 
 inline
 cam_address_t                   u32_address            (u32                     u
+                                                       );
+
+inline
+bool                            is_provider            (cam_provider_t         *provider
+                                                      , const char             *name
                                                        );
 
 inline

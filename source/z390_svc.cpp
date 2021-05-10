@@ -9,6 +9,27 @@ using namespace akaFrame::cam::id_table;
 
 namespace akaFrame { namespace cam { namespace z390 {
 
+static void load(
+        Z390Loader &loader, Z390Machine &m, cam_tid_t tid)
+{
+        char name[9];
+        auto nbuf = cam_address_buffer(
+                loader._cam, u32_address(m.R[0]), tid);
+        memcpy(name, nbuf, 8);
+        name[8] = '\0';
+
+        auto pid = cam_resolve(loader._cam, name);
+        if (pid._u != 0) {
+                m.R[ 0] = pid._u;
+                m.R[ 1] = 0;
+                m.R[15] = 0;
+        } else {
+                m.R[ 0] = 0;
+                m.R[ 1] = 0;
+                m.R[15] = 8;
+        }
+}
+
 static void wto_console_write_end(struct cam_s *cam, cam_tid_t tid, void *)
 {
         cam_pop(cam, tid, sizeof(const char*) + sizeof(u32) + sizeof(bool));
@@ -48,8 +69,9 @@ static void wto_write_msg(struct cam_s *cam, cam_tid_t tid, void *)
 }
 
 static void wto(
-        Z390Loader &loader, Z390Machine &m, cam_tid_t tid, u8 svc_id)
+        Z390Loader &loader, Z390Machine &m, cam_tid_t tid)
 {
+        m.R[15] = 0;
         auto params = (u8*)cam_address_buffer(loader._cam, u32_address(m.R[1]), tid);
         if (params[0] == 0) {
                 push(loader._cam, tid, params);
@@ -68,10 +90,15 @@ void svc(
         Z390Loader &loader, Z390Machine &m, cam_tid_t tid, u8 svc_id, bool &stop_dispatch)
 {
         switch (svc_id) {
+        case 8: {
+                load(loader, m, tid);
+                break; }
+
         case 35: {
-                wto(loader, m, tid, svc_id);
+                wto (loader, m, tid);
                 stop_dispatch = true;
                 break; }
+
         default:
                 CAM_ASSERT(!"not implemented");
                 break;

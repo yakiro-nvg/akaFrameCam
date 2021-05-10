@@ -25,12 +25,19 @@ struct ChunkProgram
         u32 size;
         u32 name_size;
         u32 num_texts;
+        u32 num_externals;
 };
 
 struct ChunkProgramText
 {
         u32 address;
         u32 size;
+};
+
+struct ChunkProgramExternal
+{
+        u32 name_size;
+        u32 address;
 };
 #pragma pack(pop)
 
