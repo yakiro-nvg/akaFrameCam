@@ -5,7 +5,7 @@
 #if SX_PLATFORM_WINDOWS
 #include <Windows.h>
 #include <malloc.h>
-#define aligned_alloc _aligned_malloc
+#define aligned_alloc(a, s) _aligned_malloc(s, a)
 #define aligned_free  _aligned_free
 #else
 #include <stdlib.h>
@@ -125,7 +125,7 @@ struct GeneralAllocator : public Allocator {
 
 i64 divisor_size(void)
 {
-        return 4;
+        return sizeof(void*);
 }
 
 void* allocate(i64 size, i64 align)
@@ -134,7 +134,7 @@ void* allocate(i64 size, i64 align)
         size = std::max(size, divisor_size()); 
         CAM_ASSERT(divisor_size() % align == 0 && "bad alignment");
         CAM_ASSERT(size % divisor_size()  == 0 && "bad size");
-        void *m = aligned_alloc(size, align);
+        void *m = aligned_alloc(align, size);
         CAM_ASSERT(m && "failed to allocate memory");
         return m;
 }

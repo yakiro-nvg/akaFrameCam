@@ -268,7 +268,8 @@ static bool to_chunk(const uint8_t *obj, int obj_size, FILE *outf)
                         for (int i = 0; i < 8; ++i) {
                                 esd_name_buff[i] = EBCDIC_TO_ASCII[line[16 + i]];
                         }
-                        auto esd_name = rtrim(string(esd_name_buff));
+                        string esd_name = esd_name_buff;
+                        rtrim(esd_name);
 
                         auto type = (EsdType)line[24];
                         switch (type) {
@@ -289,7 +290,7 @@ static bool to_chunk(const uint8_t *obj, int obj_size, FILE *outf)
                         case EsdType::WX:
                                 break;
                         default:
-                                printf("record #%0x8d: invalid ESD type 0x%02x\n", record_num, type);
+                                printf("record #%0x8d: invalid ESD type 0x%02x\n", record_num, (u32)type);
                                 return false;
                         }
                 } else if (c1 == 'T' && c2 == 'X' && c3 == 'T') {
@@ -342,7 +343,8 @@ static bool to_chunk(const uint8_t *obj, int obj_size, FILE *outf)
 
         if (!write_chunk_header(
                 outf, (int)count_if(programs.begin(), programs.end(),
-                                    [](auto &itr) { return itr.second.is<SdProgram>(); }))) {
+                                    [](const pair<u32, Program> &itr) {
+                                        return itr.second.is<SdProgram>(); }))) {
                 return false;
         }
 

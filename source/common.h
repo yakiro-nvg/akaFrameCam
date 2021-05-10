@@ -4,6 +4,11 @@
 #define _CAM_COMMON_H_
 
 #include <cam.h>
+
+#if SX_COMPILER_GCC
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
+
 #include "array.h"
 #include "loader.h"
 #include "task.h"
