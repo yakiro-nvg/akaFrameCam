@@ -54,23 +54,23 @@ void save_uint4b(void *start, u32 value)
 }
 
 template <typename T>
-cam_address_t push(struct cam_s *cam, cam_tid_t tid, T value)
+cam_address_t push(struct cam_s *cam, cam_fid_t fid, T value)
 {
         cam_address_t address;
-        *((T*)cam_push(cam, tid, sizeof(T), &address)) = value;
+        *((T*)cam_push(cam, fid, sizeof(T), &address)) = value;
         return address;
 }
 
 template <typename T>
-T pop(struct cam_s *cam, cam_tid_t tid)
+T pop(struct cam_s *cam, cam_fid_t fid)
 {
-        return *(T*)cam_pop(cam, tid, sizeof(T));
+        return *(T*)cam_pop(cam, fid, sizeof(T));
 }
 
 template <typename T>
-T& value(struct cam_s *cam, cam_tid_t tid, cam_address_t address)
+T& value(struct cam_s *cam, cam_fid_t fid, cam_address_t address)
 {
-        return *(T*)cam_address_buffer(cam, address, tid);
+        return *(T*)cam_address_buffer(cam, address, fid);
 }
 
 }} // namespace akaFrame.cam

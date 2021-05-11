@@ -1,65 +1,65 @@
 /* Copyright (c) 2021 FPT Software - All Rights Reserved. Proprietary.
  * Unauthorized copying of this file, via any medium is strictly prohibited. */
-#ifndef _CAM_Z390_TASK_H_
-#define _CAM_Z390_TASK_H_
+#ifndef _CAM_FIBER_H_
+#define _CAM_FIBER_H_
 
 #include <cam.h>
 #include "array.h"
 
 namespace akaFrame { namespace cam {
 
-struct Task {
-                                Task                   (struct cam_s           *cam
-                                                      , cam_tid_t               tid
+struct Fiber {
+                                Fiber                  (struct cam_s           *cam
+                                                      , cam_fid_t               fid
                                                       , cam_pid_t               entry
                                                       , cam_address_t          *params
                                                       , int                     arity
                                                       , cam_k_t                 k
                                                       , void                   *ktx
                                                        );
-                                Task                   (const Task             &other
+                                Fiber                  (const Fiber            &other
                                                        ) = delete;
-Task&                           operator=              (const Task             &other
+Fiber&                          operator=              (const Fiber            &other
                                                        ) = delete;
-                               ~Task                   (void
+                               ~Fiber                  (void
                                                        );
 
         struct cam_s  *_cam;
-        cam_tid_t      _tid;
+        cam_fid_t      _fid;
         Array<u8>      _stack;
         int            _frame;
         void         **_tlpvs;
         bool           _yielded;
 };
 
-namespace task {
+namespace fiber {
 
 inline
-void*                           at                     (Task                   &task
+void*                           at                     (Fiber                  &fiber
                                                       , int                     offset
                                                        );
 
 inline
-u8*                             push                   (Task                   &task
+u8*                             push                   (Fiber                  &fiber
                                                       , int                     bytes
                                                       , cam_address_t          *out_address
                                                        );
 
 template <typename T>
-cam_address_t                   push                   (Task                   &task
+cam_address_t                   push                   (Fiber                  &fiber
                                                       , T                       value
                                                        );
 
 inline
-u8*                             pop                    (Task                   &task
+u8*                             pop                    (Fiber                  &fiber
                                                       , int                     bytes
                                                        );
 
 template <typename T>
-T                               pop                    (Task                   &task
+T                               pop                    (Fiber                  &fiber
                                                        );
 
-void                            call                   (Task                   &task
+void                            call                   (Fiber                  &fiber
                                                       , cam_pid_t               pid
                                                       , cam_address_t          *params
                                                       , int                     arity
@@ -67,22 +67,22 @@ void                            call                   (Task                   &
                                                       , void                   *ktx
                                                        );
 
-void                            go_back                (Task                   &task
+void                            go_back                (Fiber                  &fiber
                                                        );
 
-cam_pid_t                       top_program            (Task                   &task
+cam_pid_t                       top_program            (Fiber                  &fiber
                                                        );
 
-void                            yield                  (Task                   &task
+void                            yield                  (Fiber                  &fiber
                                                       , cam_k_t                 k
                                                       , void                   *ktx
                                                        );
 
-void                            resume                 (Task                   &task
+void                            resume                 (Fiber                  &fiber
                                                        );
 
-}}} // namespace akaFrame.cam.task
+}}} // namespace akaFrame.cam.fiber
 
-#include "task.inl"
+#include "fiber.inl"
 
-#endif // !_CAM_Z390_TASK_H_
+#endif // !_CAM_FIBER_H_

@@ -20,11 +20,11 @@ TEST_CASE("asmmix")
         ec = cam_load_chunk(cam, ASMMIXA6_cam, sizeof(ASMMIXA6_cam));
         REQUIRE(ec == CEC_SUCCESS);
 
-        cam_tid_t task;
-        task = cam_task_new(cam, &ec, asmmixa1, nullptr, 0, cam_nop_k, nullptr);
+        cam_fid_t fiber;
+        fiber = cam_fiber_new(cam, &ec, asmmixa1, nullptr, 0, cam_nop_k, nullptr);
         REQUIRE(ec == CEC_SUCCESS);
-        cam_resume(cam, task);
+        cam_resume(cam, fiber);
 
-        cam_task_delete(cam, task);
+        cam_fiber_delete(cam, fiber);
         cam_delete(cam);
 }

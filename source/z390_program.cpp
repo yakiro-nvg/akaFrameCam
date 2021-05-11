@@ -40,18 +40,18 @@ static void load(struct cam_s *cam, cam_pid_t pid)
 }
 
 static void prepare(
-        struct cam_s *cam, cam_tid_t tid, cam_pid_t pid, cam_address_t *params, int arity)
+        struct cam_s *cam, cam_fid_t fid, cam_pid_t pid, cam_address_t *params, int arity)
 {
         load(cam, pid);
 
         auto &p = get_program(cam, pid);
-        auto &m = get_machine(cam, tid, p._p.provider->index);
+        auto &m = get_machine(cam, fid, p._p.provider->index);
 
         m.PC = p._code._u + p._chunk->entry;
 
         if (arity > 0) {
                 cam_address_t pa;
-                auto ps = (cam_address_t*)cam_push(cam, tid, sizeof(cam_address_t)*arity, &pa);
+                auto ps = (cam_address_t*)cam_push(cam, fid, sizeof(cam_address_t)*arity, &pa);
                 memcpy(ps, params, sizeof(cam_address_t)*arity);
                 ps[arity - 1]._u |= 0x80000000; // set last param high bit
                 m.R[1] = pa._u;
@@ -59,19 +59,19 @@ static void prepare(
                 m.R[1] = 0;
         }
 
-        push(cam, tid, arity);
+        push(cam, fid, arity);
 
         cam_address_t sa;
-        u8 *sap = cam_push(cam, tid, SAVE_AREA_BYTES + 2, &sa);
+        u8 *sap = cam_push(cam, fid, SAVE_AREA_BYTES + 2, &sa);
         sap[0] = 0xff; // returned pseudo-opcode
         m.R[13] = sa._u + 2;
         m.R[14] = sa._u;
         m.R[15] = m.PC;
 }
 
-static void execute(struct cam_s *cam, cam_tid_t tid, cam_pid_t pid)
+static void execute(struct cam_s *cam, cam_fid_t fid, cam_pid_t pid)
 {
-        dispatch(get_loader(get_program(cam, pid)._p.provider), tid);
+        dispatch(get_loader(get_program(cam, pid)._p.provider), fid);
 }
 
 Z390Program::Z390Program(cam_pid_t pid, cam_provider_t *provider)

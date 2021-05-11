@@ -14,18 +14,18 @@ using namespace akaFrame::cam::z390::program;
 
 namespace akaFrame { namespace cam { namespace z390 {
 
-static void t_entry(struct cam_provider_s *provider, cam_tid_t tid)
+static void t_entry(struct cam_provider_s *provider, cam_fid_t fid)
 {
         auto &loader = get_loader(provider);
         auto m = general_allocator().allocate(sizeof(Z390Machine));
         memset(m, 0, sizeof(Z390Machine));
-        cam_set_tlpvs(loader._cam, tid, provider->index, m);
+        cam_set_tlpvs(loader._cam, fid, provider->index, m);
 }
 
-static void t_leave(struct cam_provider_s *provider, cam_tid_t tid)
+static void t_leave(struct cam_provider_s *provider, cam_fid_t fid)
 {
         auto &loader = get_loader(provider);
-        auto m = cam_get_tlpvs(loader._cam, tid, provider->index);
+        auto m = cam_get_tlpvs(loader._cam, fid, provider->index);
         general_allocator().deallocate(m);
 }
 

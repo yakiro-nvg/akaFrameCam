@@ -11,7 +11,7 @@
 
 #include "array.h"
 #include "loader.h"
-#include "task.h"
+#include "fiber.h"
 #include "memory.h"
 #include "id_table.h"
 #include "program_table.h"
@@ -41,6 +41,7 @@ cam_s&                          operator=              (const cam_s            &
         u8                                            _global_buffer[CAM_MAX_GLOBAL];
         int                                           _global_buffer_n;
         akaFrame::cam::ProgramTable                  *_program_table;
+        cam_on_unresolved_t                           _on_unresolved;
 #ifdef CAM_Z390
         akaFrame::cam::z390::Z390Loader              *_z390;
 #endif
@@ -82,18 +83,18 @@ void                            save_uint4b            (void                   *
 
 template <typename T>
 cam_address_t                   push                   (struct cam_s           *cam
-                                                      , cam_tid_t               tid
+                                                      , cam_fid_t               fid
                                                       , T                       value
                                                        );
 
 template <typename T>
 T                               pop                    (struct cam_s           *cam
-                                                      , cam_tid_t               tid
+                                                      , cam_fid_t               fid
                                                        );
 
 template <typename T>
 T&                              value                  (struct cam_s           *cam
-                                                      , cam_tid_t               tid
+                                                      , cam_fid_t               fid
                                                       , cam_address_t           address
                                                        );
 

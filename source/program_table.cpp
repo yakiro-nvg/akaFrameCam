@@ -19,12 +19,12 @@ inline ProgramTable& from_provider(struct cam_provider_s *provider)
         return *(ProgramTable*)((u8*)provider - offsetof(ProgramTable, _provider));
 }
 
-static void t_entry(struct cam_provider_s *provider, cam_tid_t tid)
+static void t_entry(struct cam_provider_s *provider, cam_fid_t fid)
 {
         // nop
 }
 
-static void t_leave(struct cam_provider_s *provider, cam_tid_t tid)
+static void t_leave(struct cam_provider_s *provider, cam_fid_t fid)
 {
         // nop
 }

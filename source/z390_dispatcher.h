@@ -9,7 +9,7 @@
 namespace akaFrame { namespace cam { namespace z390 {
 
 void                            dispatch                       (Z390Loader             &loader
-                                                              , cam_tid_t               tid
+                                                              , cam_fid_t               fid
                                                                );
 
 }}} // namespace akaFrame.cam.z390

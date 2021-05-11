@@ -12,7 +12,7 @@ struct Z390Machine;
 
 void                            svc                            (Z390Loader             &loader
                                                               , Z390Machine            &m
-                                                              , cam_tid_t               tid
+                                                              , cam_fid_t               fid
                                                               , u8                      svc_id
                                                               , bool                   &stop_dispatch
                                                                );

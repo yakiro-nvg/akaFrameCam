@@ -7,9 +7,9 @@ Z390Loader& get_loader(cam_provider_t *provider)
         return *(Z390Loader*)((u8*)provider - offsetof(Z390Loader, _provider));
 }
 
-Z390Machine& get_machine(struct cam_s *cam, cam_tid_t tid, int index)
+Z390Machine& get_machine(struct cam_s *cam, cam_fid_t fid, int index)
 {
-        return *(Z390Machine*)cam_get_tlpvs(cam, tid, index);
+        return *(Z390Machine*)cam_get_tlpvs(cam, fid, index);
 }
 
 Z390Program& get_program(cam_program_t *program)

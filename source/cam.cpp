@@ -8,7 +8,7 @@
 using namespace akaFrame::cam;
 using namespace akaFrame::cam::mem;
 using namespace akaFrame::cam::array;
-using namespace akaFrame::cam::task;
+using namespace akaFrame::cam::fiber;
 using namespace akaFrame::cam::id_table;
 using namespace akaFrame::cam::program_table;
 
@@ -31,6 +31,7 @@ cam_s::cam_s()
         , _providers_n(0)
         , _global_buffer_n(0)
         , _program_table(nullptr)
+        , _on_unresolved(nullptr)
 #ifdef CAM_Z390
         , _z390(nullptr)
 #endif
@@ -105,14 +106,14 @@ void cam_address_drop(struct cam_s *cam, cam_address_t address)
         drop(cam->_id_table, address);
 }
 
-void* cam_address_buffer(struct cam_s *cam, cam_address_t address, cam_tid_t tid)
+void* cam_address_buffer(struct cam_s *cam, cam_address_t address, cam_fid_t fid)
 {
         switch (address._v._space) {
         case CAS_GLOBAL:
                 return &cam->_global_buffer[address._v._offset];
         case CAS_LOCAL_STACK: {
-                auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
-                return at(*t, address._v._offset); }
+                auto f = resolve<Fiber>(cam->_id_table, u32_address(fid._u));
+                return at(*f, address._v._offset); }
         case CAS_ID:
                 return resolve<void>(cam->_id_table, address);
         default:
@@ -133,88 +134,103 @@ cam_pid_t cam_resolve(struct cam_s *cam, const char *name)
                 }
         }
 
-        return { 0 }; // found found
+        // try with unresolved handler
+        if (cam->_on_unresolved) {
+                // to prevent recursion
+                auto ou = cam->_on_unresolved;
+                cam->_on_unresolved = nullptr;
+                auto pid = ou(cam, name);
+                cam->_on_unresolved = ou;
+                return pid;
+        } else {
+                return { 0 }; // not found
+        }
 }
 
-void cam_nop_k(struct cam_s *, cam_tid_t, void *)
+void cam_on_unresolved(struct cam_s *cam, cam_on_unresolved_t callback)
+{
+        cam->_on_unresolved = callback;
+}
+
+void cam_nop_k(struct cam_s *, cam_fid_t, void *)
 {
         // nop
 }
 
 void cam_call(
-        struct cam_s *cam, cam_tid_t tid, cam_pid_t pid,
+        struct cam_s *cam, cam_fid_t fid, cam_pid_t pid,
         cam_address_t *params, int arity, cam_k_t k, void *ktx)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
-        call(*t, pid, params, arity, k, ktx);
+        auto f = resolve<Fiber>(cam->_id_table, u32_address(fid._u));
+        call(*f, pid, params, arity, k, ktx);
 }
 
-void cam_go_back(struct cam_s *cam, cam_tid_t tid)
+void cam_go_back(struct cam_s *cam, cam_fid_t fid)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
-        go_back(*t);
+        auto f = resolve<Fiber>(cam->_id_table, u32_address(fid._u));
+        go_back(*f);
 }
 
-cam_tid_t cam_task_new(
+cam_fid_t cam_fiber_new(
         struct cam_s *cam, cam_error_t *out_ec, cam_pid_t entry,
         cam_address_t *params, int arity, cam_k_t k, void *ktx)
 {
         *out_ec = CEC_SUCCESS;
-        int task_size = sizeof(Task) + sizeof(void*)*CAM_MAX_PROVIDERS;
-        auto ntp = general_allocator().allocate(task_size);
-        cam_tid_t tid = { make(cam->_id_table, ntp)._u };
-        new (ntp) Task(cam, tid, entry, params, arity, k, ktx);
-        return tid;
+        int fiber_size = sizeof(Fiber) + sizeof(void*)*CAM_MAX_PROVIDERS;
+        auto ntp = general_allocator().allocate(fiber_size);
+        cam_fid_t fid = { make(cam->_id_table, ntp)._u };
+        new (ntp) Fiber(cam, fid, entry, params, arity, k, ktx);
+        return fid;
 }
 
-void cam_task_delete(struct cam_s *cam, cam_tid_t tid)
+void cam_fiber_delete(struct cam_s *cam, cam_fid_t fid)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
-        t->~Task(); general_allocator().deallocate(t);
+        auto f = resolve<Fiber>(cam->_id_table, u32_address(fid._u));
+        f->~Fiber(); general_allocator().deallocate(f);
 }
 
-cam_pid_t cam_top_program(struct cam_s *cam, cam_tid_t tid)
+cam_pid_t cam_top_program(struct cam_s *cam, cam_fid_t fid)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
-        return top_program(*t);
+        auto f = resolve<Fiber>(cam->_id_table, u32_address(fid._u));
+        return top_program(*f);
 }
 
-void cam_yield(struct cam_s *cam, cam_tid_t tid, cam_k_t k, void *ktx)
+void cam_yield(struct cam_s *cam, cam_fid_t fid, cam_k_t k, void *ktx)
 {
-        auto id = u32_address(tid._u);
-        auto t = resolve<Task>(cam->_id_table, id);
-        yield(*t, k, ktx);
+        auto id = u32_address(fid._u);
+        auto f = resolve<Fiber>(cam->_id_table, id);
+        yield(*f, k, ktx);
 }
 
-void cam_resume(struct cam_s *cam, cam_tid_t tid)
+void cam_resume(struct cam_s *cam, cam_fid_t fid)
 {
-        auto id = u32_address(tid._u);
-        auto t = resolve<Task>(cam->_id_table, id);
-        resume(*t);
+        auto id = u32_address(fid._u);
+        auto f = resolve<Fiber>(cam->_id_table, id);
+        resume(*f);
 }
 
-void* cam_get_tlpvs(struct cam_s *cam, cam_tid_t tid, int index)
+void* cam_get_tlpvs(struct cam_s *cam, cam_fid_t fid, int index)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
-        return t->_tlpvs[index];
+        auto f = resolve<Fiber>(cam->_id_table, u32_address(fid._u));
+        return f->_tlpvs[index];
 }
 
-void cam_set_tlpvs(struct cam_s *cam, cam_tid_t tid, int index, void *state)
+void cam_set_tlpvs(struct cam_s *cam, cam_fid_t fid, int index, void *state)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
-        t->_tlpvs[index] = state;
+        auto f = resolve<Fiber>(cam->_id_table, u32_address(fid._u));
+        f->_tlpvs[index] = state;
 }
 
-u8* cam_push(struct cam_s *cam, cam_tid_t tid, int bytes, cam_address_t *out_address)
+u8* cam_push(struct cam_s *cam, cam_fid_t fid, int bytes, cam_address_t *out_address)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
-        return push(*t, bytes, out_address);
+        auto f = resolve<Fiber>(cam->_id_table, u32_address(fid._u));
+        return push(*f, bytes, out_address);
 }
 
-u8* cam_pop(struct cam_s *cam, cam_tid_t tid, int bytes)
+u8* cam_pop(struct cam_s *cam, cam_fid_t fid, int bytes)
 {
-        auto t = resolve<Task>(cam->_id_table, u32_address(tid._u));
-        return pop(*t, bytes);
+        auto f = resolve<Fiber>(cam->_id_table, u32_address(fid._u));
+        return pop(*f, bytes);
 }
 
 u8* cam_global_grow(struct cam_s *cam, int bytes, cam_address_t *out_address)

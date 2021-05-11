@@ -12,14 +12,14 @@ void                            write_load             (struct cam_s           *
                                                        );
 
 void                            write_prepare          (struct cam_s           *cam
-                                                      , cam_tid_t               tid
+                                                      , cam_fid_t               fid
                                                       , cam_pid_t               pid
                                                       , cam_address_t          *params
                                                       , int                     arity
                                                        );
 
 void                            write_execute          (struct cam_s           *cam
-                                                      , cam_tid_t               tid
+                                                      , cam_fid_t               fid
                                                       , cam_pid_t               pid
                                                        );
 

@@ -17,7 +17,7 @@ Z390Loader&                     get_loader             (cam_provider_t         *
 
 inline
 Z390Machine&                    get_machine            (struct cam_s           *cam
-                                                      , cam_tid_t               tid
+                                                      , cam_fid_t               fid
                                                       , int                     index
                                                        );
 
