@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿/* Copyright (c) 2021 FPT Software - All Rights Reserved. Proprietary.
+ * Unauthorized copying of this file, via any medium is strictly prohibited. */
+using System.Runtime.InteropServices;
 
 using cam_ptr_t = System.IntPtr;
 using cam_error_t = System.Int32;

@@ -1,4 +1,6 @@
-﻿using System;
+﻿/* Copyright (c) 2021 FPT Software - All Rights Reserved. Proprietary.
+ * Unauthorized copying of this file, via any medium is strictly prohibited. */
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
