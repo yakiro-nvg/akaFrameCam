@@ -5,10 +5,6 @@
 
 #include <cam.h>
 
-#if SX_COMPILER_GCC
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-#endif
-
 #include "array.h"
 #include "loader.h"
 #include "fiber.h"
@@ -56,7 +52,7 @@ struct Continuation
 };
 
 inline
-cam_address_t                   u32_address            (u32                     u
+cam_address_t                   u32a                   (u32                     u
                                                        );
 
 inline
@@ -83,18 +79,18 @@ void                            save_uint4b            (void                   *
 
 template <typename T>
 cam_address_t                   push                   (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                       , T                       value
                                                        );
 
 template <typename T>
 T                               pop                    (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                        );
 
 template <typename T>
 T&                              value                  (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                       , cam_address_t           address
                                                        );
 

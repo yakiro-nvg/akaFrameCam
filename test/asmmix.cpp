@@ -20,8 +20,8 @@ TEST_CASE("asmmix")
         ec = cam_load_chunk(cam, ASMMIXA6_cam, sizeof(ASMMIXA6_cam));
         REQUIRE(ec == CEC_SUCCESS);
 
-        cam_fid_t fiber;
-        fiber = cam_fiber_new(cam, &ec, asmmixa1, nullptr, 0, cam_nop_k, nullptr);
+        auto fiber = cam_fiber_new(
+                cam, &ec, nullptr, asmmixa1, nullptr, 0, cam_nop_k, nullptr);
         REQUIRE(ec == CEC_SUCCESS);
         cam_resume(cam, fiber);
 

@@ -36,4 +36,9 @@ T pop(Fiber &fiber)
         return *(T*)pop(fiber, sizeof(T));
 }
 
+void* userdata(Fiber &fiber)
+{
+        return fiber._userdata;
+}
+
 }}} // namespace akaFrame.cam.fiber

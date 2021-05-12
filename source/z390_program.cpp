@@ -12,7 +12,7 @@ using namespace akaFrame::cam::id_table;
 
 namespace akaFrame { namespace cam { namespace z390 {
 
-static void load(struct cam_s *cam, cam_pid_t pid)
+static void load(struct cam_s *cam, cam_address_t pid)
 {
         auto &p = get_program(cam, pid);
         if (p._code._u != 0) {
@@ -40,7 +40,7 @@ static void load(struct cam_s *cam, cam_pid_t pid)
 }
 
 static void prepare(
-        struct cam_s *cam, cam_fid_t fid, cam_pid_t pid, cam_address_t *params, int arity)
+        struct cam_s *cam, cam_address_t fid, cam_address_t pid, cam_address_t *args, int arity)
 {
         load(cam, pid);
 
@@ -52,7 +52,7 @@ static void prepare(
         if (arity > 0) {
                 cam_address_t pa;
                 auto ps = (cam_address_t*)cam_push(cam, fid, sizeof(cam_address_t)*arity, &pa);
-                memcpy(ps, params, sizeof(cam_address_t)*arity);
+                memcpy(ps, args, sizeof(cam_address_t)*arity);
                 ps[arity - 1]._u |= 0x80000000; // set last param high bit
                 m.R[1] = pa._u;
         } else {
@@ -69,18 +69,19 @@ static void prepare(
         m.R[15] = m.PC;
 }
 
-static void execute(struct cam_s *cam, cam_fid_t fid, cam_pid_t pid)
+static void execute(struct cam_s *cam, cam_address_t fid, cam_address_t pid)
 {
         dispatch(get_loader(get_program(cam, pid)._p.provider), fid);
 }
 
-Z390Program::Z390Program(cam_pid_t pid, cam_provider_t *provider)
+Z390Program::Z390Program(cam_address_t pid, cam_provider_t *provider)
         : _pid(pid)
         , _chunk(nullptr)
         , _name(nullptr)
         , _code({ 0 })
 {
         _p.provider = provider;
+        _p.userdata = this;
         _p.load     = load;
         _p.prepare  = prepare;
         _p.execute  = execute;

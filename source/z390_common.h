@@ -17,7 +17,7 @@ Z390Loader&                     get_loader             (cam_provider_t         *
 
 inline
 Z390Machine&                    get_machine            (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                       , int                     index
                                                        );
 
@@ -27,7 +27,7 @@ Z390Program&                    get_program            (cam_program_t          *
 
 inline
 Z390Program&                    get_program            (struct cam_s           *cam
-                                                      , cam_pid_t               pid
+                                                      , cam_address_t           pid
                                                        );
 }}} // namespace akaFrame.cam.z390
 

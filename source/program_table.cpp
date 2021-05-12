@@ -10,26 +10,42 @@ using namespace akaFrame::cam::id_table;
 
 namespace akaFrame { namespace cam {
 
+static cam_provider_t stdlib = { 0, 'S', 'T', 'D', 'L', nullptr, nullptr, nullptr, nullptr };
+
 static struct StdLibProgram { const char *name; cam_program_t program; } STD_LIB_PROGRAMS[] = {
-        { "CONSOLE-WRITE", nullptr, console::write_load, console::write_prepare, console::write_execute }
+        { "CONSOLE-WRITE", &stdlib, nullptr, nullptr, console::write_prepare, console::write_execute }
 };
 
 inline ProgramTable& from_provider(struct cam_provider_s *provider)
 {
-        return *(ProgramTable*)((u8*)provider - offsetof(ProgramTable, _provider));
+        return *(ProgramTable*)provider->userdata;
 }
 
-static void t_entry(struct cam_provider_s *provider, cam_fid_t fid)
+static void fiber_entry(struct cam_provider_s *provider, cam_address_t fid)
 {
-        // nop
+        auto &pt = from_provider(provider);
+        for (auto &pair : pt._programs) {
+                auto pid = pair.second;
+                auto p = id_table::resolve<cam_program_t>(pt._cam->_id_table, pid);
+                if (p->provider->fiber_entry) {
+                        p->provider->fiber_entry(p->provider, fid);
+                }
+        }
 }
 
-static void t_leave(struct cam_provider_s *provider, cam_fid_t fid)
+static void fiber_leave(struct cam_provider_s *provider, cam_address_t fid)
 {
-        // nop
+        auto &pt = from_provider(provider);
+        for (auto &pair : pt._programs) {
+                auto pid = pair.second;
+                auto p = id_table::resolve<cam_program_t>(pt._cam->_id_table, pid);
+                if (p->provider->fiber_leave) {
+                        p->provider->fiber_leave(p->provider, fid);
+                }
+        }
 }
 
-static cam_pid_t resolve(struct cam_provider_s *provider, const char *name)
+static cam_address_t resolve(struct cam_provider_s *provider, const char *name)
 {
         auto &pt = from_provider(provider);
         auto itr = pt._programs.find(name);
@@ -52,9 +68,10 @@ ProgramTable::ProgramTable(struct cam_s *cam)
 {
         _provider.name[0] = 'P'; _provider.name[1] = 'T';
         _provider.name[2] = 'B'; _provider.name[3] = 'L';
-        _provider.t_entry = t_entry;
-        _provider.t_leave = t_leave;
-        _provider.resolve = resolve;
+        _provider.userdata    = this;
+        _provider.fiber_entry = fiber_entry;
+        _provider.fiber_leave = fiber_leave;
+        _provider.resolve     = resolve;
 
         add_standard_libs(*this);
 }
@@ -62,7 +79,7 @@ ProgramTable::ProgramTable(struct cam_s *cam)
 ProgramTable::~ProgramTable()
 {
         for (auto p : _programs) {
-                drop(_cam->_id_table, u32_address(p.second._u));
+                drop(_cam->_id_table, p.second);
         }
 }
 
@@ -72,9 +89,9 @@ void set(ProgramTable &pt, const char *name, cam_program_t *program)
 {
         auto itr = pt._programs.find(name);
         if (itr != pt._programs.end()) {
-                relocate(pt._cam->_id_table, u32_address(itr->second._u), program);
+                relocate(pt._cam->_id_table, itr->second, program);
         } else {
-                pt._programs[name] = { make(pt._cam->_id_table, program)._u };
+                pt._programs[name] = make(pt._cam->_id_table, program);
         }
 }
 

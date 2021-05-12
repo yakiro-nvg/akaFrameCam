@@ -14,7 +14,7 @@ using namespace akaFrame::cam::z390::program;
 
 namespace akaFrame { namespace cam { namespace z390 {
 
-static void t_entry(struct cam_provider_s *provider, cam_fid_t fid)
+static void fiber_entry(struct cam_provider_s *provider, cam_address_t fid)
 {
         auto &loader = get_loader(provider);
         auto m = general_allocator().allocate(sizeof(Z390Machine));
@@ -22,14 +22,14 @@ static void t_entry(struct cam_provider_s *provider, cam_fid_t fid)
         cam_set_tlpvs(loader._cam, fid, provider->index, m);
 }
 
-static void t_leave(struct cam_provider_s *provider, cam_fid_t fid)
+static void fiber_leave(struct cam_provider_s *provider, cam_address_t fid)
 {
         auto &loader = get_loader(provider);
         auto m = cam_get_tlpvs(loader._cam, fid, provider->index);
         general_allocator().deallocate(m);
 }
 
-static cam_pid_t resolve(struct cam_provider_s *provider, const char *name)
+static cam_address_t resolve(struct cam_provider_s *provider, const char *name)
 {
         auto &loader = get_loader(provider);
 
@@ -62,16 +62,17 @@ Z390Loader::Z390Loader(struct cam_s *cam)
 {
         _provider.name[0] = 'Z'; _provider.name[1] = '3';
         _provider.name[2] = '9'; _provider.name[3] = '0';
-        _provider.t_entry = t_entry;
-        _provider.t_leave = t_leave;
-        _provider.resolve = resolve;
+        _provider.userdata    = this;
+        _provider.fiber_entry = fiber_entry;
+        _provider.fiber_leave = fiber_leave;
+        _provider.resolve     = resolve;
 }
 
 Z390Loader::~Z390Loader()
 {
         for (int i = 0; i < size(_programs); ++i) {
                 auto &p = _programs[i];
-                drop(_cam->_id_table, u32_address(p->_pid._u));
+                drop(_cam->_id_table, p->_pid);
                 p->~Z390Program(); general_allocator().deallocate(p);
         }
 }
@@ -86,8 +87,9 @@ cam_error_t Z390Loader::load_chunk(const void *buff, int buff_size)
         int bytes_taken = sizeof(Chunk);
         for (int i = 0; i < (int)c.num_programs; ++i) {
                 auto npp = general_allocator().allocate(sizeof(Z390Program));
-                cam_pid_t pid = { make(_cam->_id_table, npp)._u };
-                auto np = new (npp) Z390Program(pid, &_provider); array::push(_programs, np);
+                auto pid = make(_cam->_id_table, npp);
+                auto np = new (npp) Z390Program(pid, &_provider);
+                array::push(_programs, np);
                 bytes_taken += load(*np, (const ChunkProgram*)((const u8*)buff + bytes_taken));
         }
 

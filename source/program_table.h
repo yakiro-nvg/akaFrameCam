@@ -21,9 +21,9 @@ ProgramTable&                   operator=              (const ProgramTable     &
                                ~ProgramTable           (void
                                                        );
 
-        struct cam_s                     *_cam;
-        cam_provider_t                    _provider;
-        std::map<std::string, cam_pid_t>  _programs;
+        struct cam_s                         *_cam;
+        cam_provider_t                        _provider;
+        std::map<std::string, cam_address_t>  _programs;
 };
 
 namespace program_table {

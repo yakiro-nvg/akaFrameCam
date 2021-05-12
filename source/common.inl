@@ -2,7 +2,7 @@
  * Unauthorized copying of this file, via any medium is strictly prohibited. */
 namespace akaFrame { namespace cam {
 
-cam_address_t u32_address(u32 u)
+cam_address_t u32a(u32 u)
 {
         cam_address_t a;
         a._u = u;
@@ -54,7 +54,7 @@ void save_uint4b(void *start, u32 value)
 }
 
 template <typename T>
-cam_address_t push(struct cam_s *cam, cam_fid_t fid, T value)
+cam_address_t push(struct cam_s *cam, cam_address_t fid, T value)
 {
         cam_address_t address;
         *((T*)cam_push(cam, fid, sizeof(T), &address)) = value;
@@ -62,13 +62,13 @@ cam_address_t push(struct cam_s *cam, cam_fid_t fid, T value)
 }
 
 template <typename T>
-T pop(struct cam_s *cam, cam_fid_t fid)
+T pop(struct cam_s *cam, cam_address_t fid)
 {
         return *(T*)cam_pop(cam, fid, sizeof(T));
 }
 
 template <typename T>
-T& value(struct cam_s *cam, cam_fid_t fid, cam_address_t address)
+T& value(struct cam_s *cam, cam_address_t fid, cam_address_t address)
 {
         return *(T*)cam_address_buffer(cam, address, fid);
 }

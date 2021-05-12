@@ -17,6 +17,7 @@ struct cam_s;
 #define CAS_ID          2
 
 #pragma pack(push, 1)
+
 typedef union cam_address_u {
         struct {
 #if SX_CPU_ENDIAN_BIG
@@ -43,60 +44,55 @@ typedef union cam_address_u {
         u32 _u;
 } cam_address_t;
 
-typedef struct cam_pid_s {
-        u32 _u;
-} cam_pid_t;
-
-typedef struct cam_fid_s {
-        u32 _u;
-} cam_fid_t;
-#pragma pack(pop)
-
-typedef cam_pid_t             (*cam_on_unresolved_t  ) (struct cam_s           *cam
+typedef cam_address_t         (*cam_on_unresolved_t  ) (struct cam_s           *cam
                                                       , const char             *name
                                                        );
 
 typedef void                  (*cam_k_t              ) (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                       , void                   *ktx
                                                        );
 
 typedef struct cam_provider_s {
         int                     index;
         char                    name[4];
+        void                   *userdata;
 
-        void                  (*t_entry              ) (struct cam_provider_s  *provider
-                                                      , cam_fid_t               fid
+        void                  (*fiber_entry          ) (struct cam_provider_s  *provider
+                                                      , cam_address_t           fid
                                                        );
 
-        void                  (*t_leave              ) (struct cam_provider_s  *provider
-                                                      , cam_fid_t               fid
+        void                  (*fiber_leave          ) (struct cam_provider_s  *provider
+                                                      , cam_address_t           fid
                                                        );
 
-        cam_pid_t             (*resolve              ) (struct cam_provider_s  *provider
+        cam_address_t         (*resolve              ) (struct cam_provider_s  *provider
                                                       , const char             *name
                                                        );
 } cam_provider_t;
 
 typedef struct cam_program_s {
         cam_provider_t         *provider;
+        void                   *userdata;
 
         void                  (*load                 ) (struct cam_s           *cam
-                                                      , cam_pid_t               pid
+                                                      , cam_address_t           pid
                                                        );
 
         void                  (*prepare              ) (struct cam_s           *cam
-                                                      , cam_fid_t               fid
-                                                      , cam_pid_t               pid
-                                                      , cam_address_t          *params
+                                                      , cam_address_t           fid
+                                                      , cam_address_t           pid
+                                                      , cam_address_t          *args
                                                       , int                     arity
                                                        );
 
         void                  (*execute              ) (struct cam_s           *cam
-                                                      , cam_fid_t               fid
-                                                      , cam_pid_t               pid
+                                                      , cam_address_t           fid
+                                                      , cam_address_t           pid
                                                        );
 } cam_program_t;
+
+#pragma pack(pop)
 
 CAM_API
 /// Initializes a new CAM instance.
@@ -145,12 +141,12 @@ CAM_API
 /// Resolves the buffer that is pointed to by given `address`.
 void*                           cam_address_buffer     (struct cam_s           *cam
                                                       , cam_address_t           address
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                        );
 
 CAM_API
 /// Searches for a `name`d program, returns NULL if not found.
-cam_pid_t                       cam_resolve            (struct cam_s           *cam
+cam_address_t                   cam_resolve            (struct cam_s           *cam
                                                       , const char             *name
                                                        );
 
@@ -163,16 +159,16 @@ void                            cam_on_unresolved      (struct cam_s           *
 CAM_API
 /// A no-op continuation.
 void                            cam_nop_k              (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                       , void                   *ktx
                                                        );
 
 CAM_API
 /// Calls a program with a continuation `k`.
 void                            cam_call               (struct cam_s           *cam
-                                                      , cam_fid_t               fid
-                                                      , cam_pid_t               pid
-                                                      , cam_address_t          *params
+                                                      , cam_address_t           fid
+                                                      , cam_address_t           pid
+                                                      , cam_address_t          *args
                                                       , int                     arity
                                                       , cam_k_t                 k
                                                       , void                   *ktx
@@ -181,15 +177,16 @@ void                            cam_call               (struct cam_s           *
 CAM_API
 /// Goes back to the calling program.
 void                            cam_go_back            (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                        );
 
 CAM_API
 /// Creates a fiber (logical thread), cooperative scheduled with a finalizer `k`.
-cam_fid_t                       cam_fiber_new          (struct cam_s           *cam
+cam_address_t                   cam_fiber_new          (struct cam_s           *cam
                                                       , cam_error_t            *out_ec
-                                                      , cam_pid_t               entry
-                                                      , cam_address_t          *params
+                                                      , void                   *userdata
+                                                      , cam_address_t           entry_pid
+                                                      , cam_address_t          *args
                                                       , int                     arity
                                                       , cam_k_t                 k
                                                       , void                   *ktx
@@ -198,19 +195,25 @@ cam_fid_t                       cam_fiber_new          (struct cam_s           *
 CAM_API
 /// Releases allocated resources and deletes the fiber.
 void                            cam_fiber_delete       (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
+                                                       );
+
+CAM_API
+/// Returns fiber's opaque userdata.
+void*                           cam_fiber_userdata     (struct cam_s           *cam
+                                                      , cam_address_t           fid
                                                        );
 
 CAM_API
 /// Returns top program (last activation record).
-cam_pid_t                       cam_top_program        (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+cam_address_t                   cam_top_program        (struct cam_s           *cam
+                                                      , cam_address_t           fid
                                                        );
 
 CAM_API
 /// Yields with a continuation `k`.
 void                            cam_yield              (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                       , cam_k_t                 k
                                                       , void                   *ktx
                                                        );
@@ -218,20 +221,20 @@ void                            cam_yield              (struct cam_s           *
 CAM_API
 /// Starts or resumes, returns when the fiber suspends or finishes its execution.
 void                            cam_resume             (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                        );
 
 CAM_API
 /// Gets provider (at given `index`) state on local stack.
 void*                           cam_get_tlpvs          (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                       , int                     index
                                                        );
 
 CAM_API
 /// Sets provider (at given `index`) state on local stack.
 void                            cam_set_tlpvs          (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                       , int                     index
                                                       , void                   *state
                                                        );
@@ -239,7 +242,7 @@ void                            cam_set_tlpvs          (struct cam_s           *
 CAM_API
 /// Resizes the local stack so it contains more `bytes`, returns previous top.
 u8*                             cam_push               (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                       , int                     bytes
                                                       , cam_address_t          *out_address
                                                        );
@@ -247,7 +250,7 @@ u8*                             cam_push               (struct cam_s           *
 CAM_API
 /// Resizes the local stack so it contains less `bytes`, returns next top.
 u8*                             cam_pop                (struct cam_s           *cam
-                                                      , cam_fid_t               fid
+                                                      , cam_address_t           fid
                                                       , int                     bytes
                                                        );
 

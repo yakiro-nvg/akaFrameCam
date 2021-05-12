@@ -8,19 +8,19 @@
 namespace akaFrame { namespace cam { namespace console {
 
 void                            write_load             (struct cam_s           *cam
-                                                      , cam_pid_t               pid
+                                                      , cam_address_t           pid
                                                        );
 
 void                            write_prepare          (struct cam_s           *cam
-                                                      , cam_fid_t               fid
-                                                      , cam_pid_t               pid
-                                                      , cam_address_t          *params
+                                                      , cam_address_t           fid
+                                                      , cam_address_t           pid
+                                                      , cam_address_t          *args
                                                       , int                     arity
                                                        );
 
 void                            write_execute          (struct cam_s           *cam
-                                                      , cam_fid_t               fid
-                                                      , cam_pid_t               pid
+                                                      , cam_address_t           fid
+                                                      , cam_address_t           pid
                                                        );
 
 }}} // namespace akaFrame.cam.console

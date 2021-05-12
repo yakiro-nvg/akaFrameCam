@@ -9,7 +9,7 @@
 namespace akaFrame { namespace cam { namespace z390 {
 
 struct Z390Program {
-                                Z390Program            (cam_pid_t               pid
+                                Z390Program            (cam_address_t           pid
                                                       , cam_provider_t         *provider
                                                        );
                                 Z390Program            (const Z390Program      &other
@@ -20,7 +20,7 @@ Z390Program&                    operator=              (const Z390Program      &
                                                        );
 
         cam_program_t       _p;
-        cam_pid_t           _pid;
+        cam_address_t       _pid;
         const ChunkProgram *_chunk;
         const char         *_name;
         cam_address_t       _code;

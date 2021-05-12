@@ -23,7 +23,7 @@ struct RSa
                 rsa.b2 = code[2] >> 4;
                 rsa.d2 = code[2] & 0xf;
                 rsa.d2 = (rsa.d2 << 8) | code[3];
-                rsa.a = u32_address(m.R[rsa.b2] + rsa.d2);
+                rsa.a._u = m.R[rsa.b2] + rsa.d2;
                 return rsa;
         }
 
@@ -42,7 +42,7 @@ struct RXa
                 rxa.b2 = code[2] >> 4;
                 rxa.d2 = code[2] & 0xf;
                 rxa.d2 = (rxa.d2 << 8) | code[3];
-                rxa.a = u32_address(m.R[rxa.b2] + m.R[rxa.x2] + rxa.d2);
+                rxa.a._u = m.R[rxa.b2] + m.R[rxa.x2] + rxa.d2;
                 return rxa;
         }
 
@@ -61,7 +61,7 @@ struct RXb
                 rxb.b2 = code[2] >> 4;
                 rxb.d2 = code[2] & 0xf;
                 rxb.d2 = (rxb.d2 << 8) | code[3];
-                rxb.a = u32_address(m.R[rxb.b2] + m.R[rxb.x2] + rxb.d2);
+                rxb.a._u = m.R[rxb.b2] + m.R[rxb.x2] + rxb.d2;
                 return rxb;
         }
 
@@ -148,7 +148,7 @@ static u32 ins_size(u8 opcode)
 }
 
 static u32 ins_a7xx(
-        Z390Loader &loader, cam_fid_t fid, Z390Machine &m, u8 *code, bool &stop_dispatch)
+        Z390Loader &loader, cam_address_t fid, Z390Machine &m, u8 *code, bool &stop_dispatch)
 {
         switch (code[1] & 0xf) {
         case 0x5: { // BRAS
@@ -165,7 +165,7 @@ static u32 ins_a7xx(
 }
 
 static u32 ins_lt_0x40(
-        Z390Loader &loader, cam_fid_t fid, Z390Machine &m, u8 *code, bool &stop_dispatch)
+        Z390Loader &loader, cam_address_t fid, Z390Machine &m, u8 *code, bool &stop_dispatch)
 {
         switch (code[0]) {
         case 0x05: { // BALR
@@ -229,7 +229,7 @@ static u32 ins_lt_0x40(
 }
 
 static u32 ins_lt_0x80(
-        Z390Loader &loader, cam_fid_t fid, Z390Machine &m, u8 *code, bool &stop_dispatch)
+        Z390Loader &loader, cam_address_t fid, Z390Machine &m, u8 *code, bool &stop_dispatch)
 {
         switch (code[0]) {
         case 0x41: { // LA
@@ -269,7 +269,7 @@ static u32 ins_lt_0x80(
 }
 
 static u32 ins_lt_0xc0(
-        Z390Loader &loader, cam_fid_t fid, Z390Machine &m, u8 *code, bool &stop_dispatch)
+        Z390Loader &loader, cam_address_t fid, Z390Machine &m, u8 *code, bool &stop_dispatch)
 {
         switch (code[0]) {
         case 0x90: { // STM
@@ -296,29 +296,32 @@ static u32 ins_lt_0xc0(
 }
 
 static u32 ins_lt_0xff(
-        Z390Loader &loader, cam_fid_t fid, Z390Machine &m, u8 *code, bool &stop_dispatch)
+        Z390Loader &loader, cam_address_t fid, Z390Machine &m, u8 *code, bool &stop_dispatch)
 {
         CAM_ASSERT(!"not implemented");
         return m.PC + ins_size(code[0]);
 }
 
-static void call_end(struct cam_s *cam, cam_fid_t fid, void *ktx)
+static void call_end(struct cam_s *cam, cam_address_t fid, void *ktx)
 {
         auto &m = *(Z390Machine*)ktx;
         m.PC = m.R[14]; // continue at R14
+        auto pid = cam_top_program(cam, fid);
+        auto program = resolve<cam_program_t>(cam->_id_table, pid);
+        auto &loader = get_loader(program->provider);
+        dispatch(loader, fid);
 }
 
-static void call_program(struct cam_s *cam, Z390Machine &m, cam_fid_t fid, cam_pid_t pid)
+static void call_program(struct cam_s *cam, Z390Machine &m, cam_address_t fid, cam_address_t pid)
 {
         int arity = 0;
-        cam_address_t dps[CAM_MAX_ARITY];
+        cam_address_t dargs[CAM_MAX_ARITY];
 
         if (m.R[1] != 0) {
-                auto sps = (cam_address_t*)cam_address_buffer(
-                        cam, u32_address(m.R[1]), fid);
+                auto sargs = (cam_address_t*)cam_address_buffer(cam, u32a(m.R[1]), fid);
                 do {
-                        dps[arity]._u = sps[arity]._u & 0x7FFFFFFF;
-                        if ((sps[arity]._u & 0x80000000) != 0) {
+                        dargs[arity]._u = sargs[arity]._u & 0x7FFFFFFF;
+                        if ((sargs[arity]._u & 0x80000000) != 0) {
                                 break; // last param
                         } else {
                                 ++arity;
@@ -326,27 +329,27 @@ static void call_program(struct cam_s *cam, Z390Machine &m, cam_fid_t fid, cam_p
                 } while (true);
         }
 
-        cam_call(cam, fid, pid, dps, arity, call_end, &m);
+        cam_call(cam, fid, pid, dargs, arity, call_end, &m);
 }
 
-void dispatch(Z390Loader &loader, cam_fid_t fid)
+void dispatch(Z390Loader &loader, cam_address_t fid)
 {
         auto &m = get_machine(loader._cam, fid, loader._provider.index);
 
         bool stop_dispatch = false;
         do {
-                auto pca = u32_address(m.PC);
+                auto pca = u32a(m.PC);
                 if (pca._v._space == CAS_ID) {
                         auto target = resolve<cam_program_t>(loader._cam->_id_table, pca);
-                        target->load(loader._cam, { pca._u });
+                        target->load(loader._cam, pca);
                         if (is_provider(target->provider, "Z390")) {
                                 m.PC = get_program(target)._code._u;
                         } else {
-                                call_program(loader._cam, m, fid, { pca._u });
+                                call_program(loader._cam, m, fid, pca);
                                 stop_dispatch = true;
                         }
                 } else {
-                        u8 *code = (u8*)cam_address_buffer(loader._cam, u32_address(m.PC), fid);
+                        u8 *code = (u8*)cam_address_buffer(loader._cam, pca, fid);
                         if (code[0] == 0xff) {
                                 cam_go_back(loader._cam, fid);
                                 stop_dispatch = true;

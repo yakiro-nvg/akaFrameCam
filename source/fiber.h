@@ -10,9 +10,10 @@ namespace akaFrame { namespace cam {
 
 struct Fiber {
                                 Fiber                  (struct cam_s           *cam
-                                                      , cam_fid_t               fid
-                                                      , cam_pid_t               entry
-                                                      , cam_address_t          *params
+                                                      , cam_address_t           fid
+                                                      , void                   *userdata
+                                                      , cam_address_t           entry_pid
+                                                      , cam_address_t          *args
                                                       , int                     arity
                                                       , cam_k_t                 k
                                                       , void                   *ktx
@@ -25,11 +26,13 @@ Fiber&                          operator=              (const Fiber            &
                                                        );
 
         struct cam_s  *_cam;
-        cam_fid_t      _fid;
+        cam_address_t  _fid;
         Array<u8>      _stack;
         int            _frame;
         void         **_tlpvs;
         bool           _yielded;
+        bool           _resuming;
+        void          *_userdata;
 };
 
 namespace fiber {
@@ -60,8 +63,8 @@ T                               pop                    (Fiber                  &
                                                        );
 
 void                            call                   (Fiber                  &fiber
-                                                      , cam_pid_t               pid
-                                                      , cam_address_t          *params
+                                                      , cam_address_t           pid
+                                                      , cam_address_t          *args
                                                       , int                     arity
                                                       , cam_k_t                 k
                                                       , void                   *ktx
@@ -70,7 +73,7 @@ void                            call                   (Fiber                  &
 void                            go_back                (Fiber                  &fiber
                                                        );
 
-cam_pid_t                       top_program            (Fiber                  &fiber
+cam_address_t                   top_program            (Fiber                  &fiber
                                                        );
 
 void                            yield                  (Fiber                  &fiber
@@ -79,6 +82,10 @@ void                            yield                  (Fiber                  &
                                                        );
 
 void                            resume                 (Fiber                  &fiber
+                                                       );
+
+inline
+void*                           userdata               (Fiber                  &fiber
                                                        );
 
 }}} // namespace akaFrame.cam.fiber
