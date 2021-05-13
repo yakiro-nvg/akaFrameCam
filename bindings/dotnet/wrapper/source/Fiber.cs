@@ -52,15 +52,5 @@ namespace akaFrameCam
             var pp = (void**)GetBuffer(address).ToPointer();
             return Marshal.PtrToStringAnsi(new IntPtr(*pp), length);
         }
-
-        public unsafe bool GetBool(Address address)
-        {
-            return *(bool*)GetBuffer(address);
-        }
-
-        public unsafe int GetInt(Address address)
-        {
-            return *(int*)GetBuffer(address);
-        }
     }
 }
