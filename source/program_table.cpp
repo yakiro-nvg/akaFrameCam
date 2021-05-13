@@ -13,7 +13,7 @@ namespace akaFrame { namespace cam {
 static cam_provider_t stdlib = { 0, 'S', 'T', 'D', 'L', nullptr, nullptr, nullptr, nullptr };
 
 static struct StdLibProgram { const char *name; cam_program_t program; } STD_LIB_PROGRAMS[] = {
-        { "CONSOLE-WRITE", &stdlib, nullptr, nullptr, console::write_prepare, console::write_execute }
+        { "CONSOLE-WRITE", &stdlib, nullptr, console::write_execute }
 };
 
 inline ProgramTable& from_provider(struct cam_provider_s *provider)
@@ -52,7 +52,7 @@ static cam_address_t resolve(struct cam_provider_s *provider, const char *name)
         if (itr != pt._programs.end()) {
                 return itr->second;
         } else {
-                return { 0 };
+                return u32a(0);
         }
 }
 

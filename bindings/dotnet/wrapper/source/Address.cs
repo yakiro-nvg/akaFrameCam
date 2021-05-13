@@ -2,10 +2,12 @@
  * Unauthorized copying of this file, via any medium is strictly prohibited. */
 namespace akaFrameCam
 {
-    public struct Address 
+    public struct Address
     {
-        public int Value { get; set; }
+        public uint Value { get; set; }
 
         public bool IsZero() => Value == 0;
+
+        public static Address From(uint value) => new Address { Value = value };
     }
 }

@@ -6,7 +6,8 @@ using cam_ptr_t = System.IntPtr;
 using cam_error_t = System.Int32;
 using cam_error_ptr_t = System.IntPtr;
 using voidptr_t = System.IntPtr;
-using cam_address_t = System.Int32;
+using u32ptr_t = System.IntPtr;
+using cam_address_t = System.UInt32;
 using cam_k_t = System.IntPtr;
 using cam_on_unresolved_t = System.IntPtr;
 using cam_provider_ptr_t = System.IntPtr;
@@ -14,8 +15,6 @@ using cam_provider_fiber_entry_t = System.IntPtr;
 using cam_provider_fiber_leave_t = System.IntPtr;
 using cam_provider_resolve_t = System.IntPtr;
 using cam_program_ptr_t = System.IntPtr;
-using cam_program_load_t = System.IntPtr;
-using cam_program_prepare_t = System.IntPtr;
 using cam_program_execute_t = System.IntPtr;
 
 namespace akaFrameCam
@@ -56,11 +55,15 @@ namespace akaFrameCam
 
             public voidptr_t UserData { get; set; }
 
-            public cam_program_load_t Load { get; set; }
-
-            public cam_program_prepare_t Prepare { get; set; }
-
             public cam_program_execute_t Execute { get; set; }
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct Args
+        {
+            public int Arity { get; set; }
+
+            public u32ptr_t At { get; set; }
         }
 
         [DllImport(CamLibraryName, CallingConvention = CallingConvention.Cdecl)]
@@ -87,15 +90,15 @@ namespace akaFrameCam
         [DllImport(CamLibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void cam_call(
             cam_ptr_t cam, cam_address_t fid, cam_address_t pid,
-            cam_address_t[] args, int arity, cam_k_t k, voidptr_t ktx);
+            uint[] args, int arity, cam_k_t k, voidptr_t ktx);
 
         [DllImport(CamLibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void cam_go_back(cam_ptr_t cam, cam_address_t fid);
 
         [DllImport(CamLibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern cam_address_t cam_fiber_new(
-            cam_ptr_t cam, cam_error_ptr_t out_ec, voidptr_t userdata, cam_address_t entry_pid,
-            cam_address_t[] args, int arity, cam_k_t k, voidptr_t ktx);
+            cam_ptr_t cam, cam_error_ptr_t out_ec, voidptr_t userdata,
+            cam_address_t entry_pid, uint[] args, int arity, cam_k_t k, voidptr_t ktx);
 
         [DllImport(CamLibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void cam_fiber_delete(cam_ptr_t cam, cam_address_t fid);
@@ -108,5 +111,8 @@ namespace akaFrameCam
 
         [DllImport(CamLibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void cam_resume(cam_ptr_t cam, cam_address_t fid);
+
+        [DllImport(CamLibraryName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Args cam_args(cam_ptr_t cam, cam_address_t fid);
     }
 }

@@ -11,29 +11,23 @@ namespace akaFrameCam
     public class Cam : IDisposable
     {
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate void K(IntPtr cam, int fid, IntPtr ktx);
+        private delegate void K(IntPtr cam, uint fid, IntPtr ktx);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-        private delegate int OnUnresolved(IntPtr cam, string name);
+        private delegate uint OnUnresolved(IntPtr cam, string name);
         
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate void FiberEntry(IntPtr provider, int fid);
+        private delegate void FiberEntry(IntPtr provider, uint fid);
         
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate void FiberLeave(IntPtr provider, int fid);
+        private delegate void FiberLeave(IntPtr provider, uint fid);
         
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate void ProgramPrepare(
-            IntPtr cam, int fid, int pid, IntPtr args, int arity);
-        
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate void ProgramExecute(IntPtr cam, int fid, int pid);
+        private delegate void ProgramExecute(IntPtr cam, uint fid, uint pid);
 
         private class ProgramRecord
         {
-            public Func<Fiber, Address[], Task> Execute { get; set; }
-
-            public Action Load { get; set; }
+            public Func<Fiber, uint[], Task> Execute { get; set; }
 
             public Action<Fiber> FiberEntry { get; set; }
 
@@ -46,13 +40,13 @@ namespace akaFrameCam
 
         private IntPtr _cam;
         private readonly IList<byte[]> _chunks;
-        private readonly IDictionary<int, Tuple<GCHandle, Fiber>> _fibers;
+        private readonly IDictionary<uint, Tuple<GCHandle, Fiber>> _fibers;
         private readonly IList<ProgramRecord> _programs;
 
         internal IntPtr NativeCam { get { return _cam; } }
         public IList<string> ChunkSearchPaths { get; private set; }
 
-        private int LoadOnDemand(IntPtr cam, string name)
+        private uint LoadOnDemand(IntPtr cam, string name)
         {
             foreach (var searchPath in ChunkSearchPaths)
             {
@@ -81,7 +75,7 @@ namespace akaFrameCam
             }
 
             _chunks = new List<byte[]>();
-            _fibers = new Dictionary<int, Tuple<GCHandle, Fiber>>();
+            _fibers = new Dictionary<uint, Tuple<GCHandle, Fiber>>();
             _programs = new List<ProgramRecord>();
 
             ChunkSearchPaths = new List<string> { Directory.GetCurrentDirectory() };
@@ -121,12 +115,12 @@ namespace akaFrameCam
             Dispose(true);
         }
 
-        private void NopK(IntPtr cam, int fid, IntPtr ktx)
+        private void NopK(IntPtr cam, uint fid, IntPtr ktx)
         {
             // nop
         }
 
-        private void OnFiberEntry(IntPtr provider, int fid)
+        private void OnFiberEntry(IntPtr provider, uint fid)
         {
             var np = Marshal.PtrToStructure<Native.Provider>(provider);
             var program = _programs[np.UserData.ToInt32()];
@@ -136,7 +130,7 @@ namespace akaFrameCam
             program.FiberEntry?.Invoke(fiber);
         }
 
-        private void OnFiberLeave(IntPtr provider, int fid)
+        private void OnFiberLeave(IntPtr provider, uint fid)
         {
             var np = Marshal.PtrToStructure<Native.Provider>(provider);
             var program = _programs[np.UserData.ToInt32()];
@@ -145,8 +139,7 @@ namespace akaFrameCam
             program.FiberLeave?.Invoke(fiber);
         }
 
-        private unsafe void OnProgramPrepare(
-            IntPtr cam, int fid, int pid, IntPtr args, int arity)
+        private unsafe void OnProgramExecute(IntPtr cam, uint fid, uint pid)
         {
             var pp = Native.cam_address_buffer(_cam, pid, fid);
             var np = Marshal.PtrToStructure<Native.Program>(pp);
@@ -154,10 +147,11 @@ namespace akaFrameCam
             var fud = Native.cam_fiber_userdata(_cam, fid);
             var fiber = (Fiber)GCHandle.FromIntPtr(fud).Target;
 
-            var dargs = new Address[arity];
-            for (int i = 0; i < arity; ++i)
+            var sargs = Native.cam_args(cam, fid);
+            var dargs = new uint[sargs.Arity];
+            for (int i = 0; i < sargs.Arity; ++i)
             {
-                dargs[i].Value = ((int*)args)[i];
+                dargs[i] = ((uint*)sargs.At)[i];
             }
 
             var task = program.Execute(fiber, dargs);
@@ -177,13 +171,8 @@ namespace akaFrameCam
             }
         }
 
-        private void OnProgramExecute(IntPtr cam, int fid, int pid)
-        {
-            // nop
-        }
-
         public void AddProgram(
-            string name, Func<Fiber, Address[], Task> execute,
+            string name, Func<Fiber, uint[], Task> execute,
             Action<Fiber> fiberEntry = null, Action<Fiber> fiberLeave = null)
         {
             var pr = new ProgramRecord
@@ -203,7 +192,6 @@ namespace akaFrameCam
 
             var program = new Native.Program { Provider = pr.ProviderPtr };
             program.UserData = new IntPtr(_programs.Count - 1);
-            program.Prepare = Marshal.GetFunctionPointerForDelegate<ProgramPrepare>(OnProgramPrepare);
             program.Execute = Marshal.GetFunctionPointerForDelegate<ProgramExecute>(OnProgramExecute);
             pr.ProgramPtr = Marshal.AllocHGlobal(Marshal.SizeOf<Native.Program>());
             Marshal.StructureToPtr(program, pr.ProgramPtr, false);
@@ -230,7 +218,7 @@ namespace akaFrameCam
             return new Address { Value = pid };
         }
 
-        private void FiberComplete(IntPtr cam, int fid, IntPtr ctx)
+        private void FiberComplete(IntPtr cam, uint fid, IntPtr ctx)
         {
             var ud = Native.cam_fiber_userdata(_cam, fid);
             var fiber = (Fiber)GCHandle.FromIntPtr(ud).Target;

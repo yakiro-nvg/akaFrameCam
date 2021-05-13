@@ -18,7 +18,6 @@
 
 #define CAM_MAX_PROVIDERS 8
 #define CAM_MAX_GLOBAL    16*1024*1024
-#define CAM_MAX_ARITY     16
 
 struct cam_s {
                                 cam_s                  (void

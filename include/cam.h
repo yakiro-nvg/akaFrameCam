@@ -44,6 +44,11 @@ typedef union cam_address_u {
         u32 _u;
 } cam_address_t;
 
+typedef struct cam_args_s {
+        int  arity;
+        u32 *at;
+} cam_args_t;
+
 typedef cam_address_t         (*cam_on_unresolved_t  ) (struct cam_s           *cam
                                                       , const char             *name
                                                        );
@@ -74,17 +79,6 @@ typedef struct cam_provider_s {
 typedef struct cam_program_s {
         cam_provider_t         *provider;
         void                   *userdata;
-
-        void                  (*load                 ) (struct cam_s           *cam
-                                                      , cam_address_t           pid
-                                                       );
-
-        void                  (*prepare              ) (struct cam_s           *cam
-                                                      , cam_address_t           fid
-                                                      , cam_address_t           pid
-                                                      , cam_address_t          *args
-                                                      , int                     arity
-                                                       );
 
         void                  (*execute              ) (struct cam_s           *cam
                                                       , cam_address_t           fid
@@ -168,7 +162,7 @@ CAM_API
 void                            cam_call               (struct cam_s           *cam
                                                       , cam_address_t           fid
                                                       , cam_address_t           pid
-                                                      , cam_address_t          *args
+                                                      , u32                    *args
                                                       , int                     arity
                                                       , cam_k_t                 k
                                                       , void                   *ktx
@@ -186,7 +180,7 @@ cam_address_t                   cam_fiber_new          (struct cam_s           *
                                                       , cam_error_t            *out_ec
                                                       , void                   *userdata
                                                       , cam_address_t           entry_pid
-                                                      , cam_address_t          *args
+                                                      , u32                    *args
                                                       , int                     arity
                                                       , cam_k_t                 k
                                                       , void                   *ktx
@@ -252,6 +246,24 @@ CAM_API
 u8*                             cam_pop                (struct cam_s           *cam
                                                       , cam_address_t           fid
                                                       , int                     bytes
+                                                       );
+
+CAM_API
+/// Returns address to the start of current function's stack frame.
+cam_address_t                   cam_bp                 (struct cam_s           *cam
+                                                      , cam_address_t           fid
+                                                       );
+
+CAM_API
+/// Returns address to top of the stack frame.
+cam_address_t                   cam_sp                 (struct cam_s           *cam
+                                                      , cam_address_t           fid
+                                                       );
+
+CAM_API
+/// Returns passed argument list.
+cam_args_t                      cam_args               (struct cam_s           *cam
+                                                      , cam_address_t           fid
                                                        );
 
 CAM_API

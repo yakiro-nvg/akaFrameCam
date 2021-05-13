@@ -7,17 +7,6 @@
 
 namespace akaFrame { namespace cam { namespace console {
 
-void                            write_load             (struct cam_s           *cam
-                                                      , cam_address_t           pid
-                                                       );
-
-void                            write_prepare          (struct cam_s           *cam
-                                                      , cam_address_t           fid
-                                                      , cam_address_t           pid
-                                                      , cam_address_t          *args
-                                                      , int                     arity
-                                                       );
-
 void                            write_execute          (struct cam_s           *cam
                                                       , cam_address_t           fid
                                                       , cam_address_t           pid

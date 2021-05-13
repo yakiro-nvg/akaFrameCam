@@ -40,7 +40,7 @@ static cam_address_t resolve(struct cam_provider_s *provider, const char *name)
                 }
         }
 
-        return { 0 };
+        return u32a(0);
 }
 
 static bool verify_chunk_header(const Chunk &c)

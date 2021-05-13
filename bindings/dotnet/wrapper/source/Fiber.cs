@@ -13,7 +13,7 @@ namespace akaFrameCam
         private Cam _cam;
         private TaskCompletionSource<object> _tcs;
 
-        public int Id { get; internal set; }
+        public uint Id { get; internal set; }
 
         internal void OnCompleted()
         {

@@ -16,6 +16,9 @@ using namespace akaFrame::cam::program_table;
 using namespace akaFrame::cam::z390;
 #endif
 
+// NULL-idx is reserved
+enum { GLOBAL_START = 4 };
+
 static void add_loaders(cam_s *cam)
 {
 #ifdef CAM_Z390
@@ -29,7 +32,7 @@ static void add_loaders(cam_s *cam)
 cam_s::cam_s()
         :  _loaders(general_allocator())
         , _providers_n(0)
-        , _global_buffer_n(0)
+        , _global_buffer_n(GLOBAL_START) 
         , _program_table(nullptr)
         , _on_unresolved(nullptr)
 #ifdef CAM_Z390
@@ -144,7 +147,7 @@ cam_address_t cam_resolve(struct cam_s *cam, const char *name)
                 cam->_on_unresolved = ou;
                 return pid;
         } else {
-                return { 0 }; // not found
+                return u32a(0); // not found
         }
 }
 
@@ -160,7 +163,7 @@ void cam_nop_k(struct cam_s *, cam_address_t, void *)
 
 void cam_call(
         struct cam_s *cam, cam_address_t fid, cam_address_t pid,
-        cam_address_t *args, int arity, cam_k_t k, void *ktx)
+        u32 *args, int arity, cam_k_t k, void *ktx)
 {
         auto f = resolve<Fiber>(cam->_id_table, fid);
         call(*f, pid, args, arity, k, ktx);
@@ -174,7 +177,7 @@ void cam_go_back(struct cam_s *cam, cam_address_t fid)
 
 cam_address_t cam_fiber_new(
         struct cam_s *cam, cam_error_t *out_ec, void *userdata,
-        cam_address_t entry_pid, cam_address_t *args, int arity, cam_k_t k, void *ktx)
+        cam_address_t entry_pid, u32 *args, int arity, cam_k_t k, void *ktx)
 {
         *out_ec = CEC_SUCCESS;
         int fiber_size = sizeof(Fiber) + sizeof(void*)*CAM_MAX_PROVIDERS;
@@ -236,6 +239,24 @@ u8* cam_pop(struct cam_s *cam, cam_address_t fid, int bytes)
 {
         auto f = resolve<Fiber>(cam->_id_table, fid);
         return pop(*f, bytes);
+}
+
+cam_address_t cam_bp(struct cam_s *cam, cam_address_t fid)
+{
+        auto f = resolve<Fiber>(cam->_id_table, fid);
+        return bp(*f);
+}
+
+cam_address_t cam_sp(struct cam_s *cam, cam_address_t fid)
+{
+        auto f = resolve<Fiber>(cam->_id_table, fid);
+        return sp(*f);
+}
+
+cam_args_t cam_args(struct cam_s *cam, cam_address_t fid)
+{
+        auto f = resolve<Fiber>(cam->_id_table, fid);
+        return args(*f);
 }
 
 u8* cam_global_grow(struct cam_s *cam, int bytes, cam_address_t *out_address)

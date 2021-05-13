@@ -14,9 +14,9 @@ namespace akaFrameCam.NET.Runner
             cam.AddProgram("CONSOLE-WRITE", async (fiber, args) =>
             {
                 await Task.Delay(500);
-                var len = fiber.GetInt(args[1]);
-                var msg = fiber.GetString(args[0], len);
-                var endLine = fiber.GetBool(args[2]);
+                var len = args[0];
+                var msg = fiber.GetString(Address.From(args[1]), (int)len);
+                var endLine = args[2] != 0;
                 Console.Write(msg + (endLine ? "\n" : ""));
             });
 

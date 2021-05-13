@@ -314,22 +314,24 @@ static void call_end(struct cam_s *cam, cam_address_t fid, void *ktx)
 
 static void call_program(struct cam_s *cam, Z390Machine &m, cam_address_t fid, cam_address_t pid)
 {
-        int arity = 0;
-        cam_address_t dargs[CAM_MAX_ARITY];
-
         if (m.R[1] != 0) {
-                auto sargs = (cam_address_t*)cam_address_buffer(cam, u32a(m.R[1]), fid);
+                auto args = (u32*)cam_address_buffer(cam, u32a(m.R[1]), fid);
+
+                int i = 0;
                 do {
-                        dargs[arity]._u = sargs[arity]._u & 0x7FFFFFFF;
-                        if ((sargs[arity]._u & 0x80000000) != 0) {
+                        args[i] &= 0x7FFFFFFF;
+                        if ((args[i] & 0x80000000) != 0) {
+                                ++i;
                                 break; // last param
                         } else {
-                                ++arity;
+                                ++i;
                         }
                 } while (true);
-        }
 
-        cam_call(cam, fid, pid, dargs, arity, call_end, &m);
+                cam_call(cam, fid, pid, args, i, call_end, &m);
+        } else {
+                cam_call(cam, fid, pid, nullptr, 0, call_end, &m);
+        }
 }
 
 void dispatch(Z390Loader &loader, cam_address_t fid)
@@ -341,8 +343,8 @@ void dispatch(Z390Loader &loader, cam_address_t fid)
                 auto pca = u32a(m.PC);
                 if (pca._v._space == CAS_ID) {
                         auto target = resolve<cam_program_t>(loader._cam->_id_table, pca);
-                        target->load(loader._cam, pca);
                         if (is_provider(target->provider, "Z390")) {
+                                program::prepare(get_program(target), loader._cam);
                                 m.PC = get_program(target)._code._u;
                         } else {
                                 call_program(loader._cam, m, fid, pca);

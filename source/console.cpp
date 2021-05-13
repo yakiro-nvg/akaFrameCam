@@ -7,24 +7,13 @@
 
 namespace akaFrame { namespace cam { namespace console {
 
-void write_load(struct cam_s *cam, cam_address_t pid)
-{
-        // nop
-}
-
-void write_prepare(
-        struct cam_s *cam, cam_address_t fid, cam_address_t pid, cam_address_t *args, int arity)
-{
-        CAM_ASSERT(arity == 3);
-        push(cam, fid, args);
-}
-
 void write_execute(struct cam_s *cam, cam_address_t fid, cam_address_t pid)
 {
-        auto args = pop<cam_address_t*>(cam, fid);
-        auto msg      = value<const char*>(cam, fid, args[0]);
-        auto len      = value<i32        >(cam, fid, args[1]);
-        auto end_line = value<u8         >(cam, fid, args[2]);
+        auto args = cam_args(cam, fid);
+        CAM_ASSERT(args.arity == 3);
+        auto len      = args.at[0];
+        auto msg      = value<const char*>(cam, fid, u32a(args.at[1]));
+        auto end_line = args.at[2];
         printf(end_line ? "%.*s\n" : "%.*s", len, msg);
         cam_go_back(cam, fid);
 }

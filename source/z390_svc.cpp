@@ -31,7 +31,7 @@ static void load(
 
 static void wto_console_write_end(struct cam_s *cam, cam_address_t fid, void *)
 {
-        cam_pop(cam, fid, sizeof(const char*) + sizeof(u32) + sizeof(bool));
+        cam_pop(cam, fid, sizeof(const char*));
         pop<cam_k_t>(cam, fid)(cam, fid, nullptr);
 }
 
@@ -39,11 +39,7 @@ static void wto_console_write(
         struct cam_s *cam, cam_address_t fid, const char *msg, int len, bool end_line, cam_k_t k)
 {
         push(cam, fid, k);
-        cam_address_t args[] = {
-                        push     (cam, fid, msg),
-                        push<i32>(cam, fid, len),
-                        push<u8 >(cam, fid, end_line)
-                };
+        u32 args[] = { (u32)len, push(cam, fid, msg)._u, end_line };
         auto f = cam_resolve(cam, "CONSOLE-WRITE");
         cam_call(cam, fid, f, args, 3, wto_console_write_end, nullptr);
 }

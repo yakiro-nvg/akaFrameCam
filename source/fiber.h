@@ -8,12 +8,20 @@
 
 namespace akaFrame { namespace cam {
 
+struct stack_frame_t {
+        int           previous;
+        cam_address_t pid;
+        int           bp;
+};
+
+enum { NO_FRAME = -1 };
+
 struct Fiber {
                                 Fiber                  (struct cam_s           *cam
                                                       , cam_address_t           fid
                                                       , void                   *userdata
                                                       , cam_address_t           entry_pid
-                                                      , cam_address_t          *args
+                                                      , u32                    *args
                                                       , int                     arity
                                                       , cam_k_t                 k
                                                       , void                   *ktx
@@ -42,6 +50,11 @@ void*                           at                     (Fiber                  &
                                                       , int                     offset
                                                        );
 
+template <typename T>
+T                               at                     (Fiber                  &fiber
+                                                      , int                     offset
+                                                       );
+
 inline
 u8*                             push                   (Fiber                  &fiber
                                                       , int                     bytes
@@ -62,9 +75,40 @@ template <typename T>
 T                               pop                    (Fiber                  &fiber
                                                        );
 
+inline
+void                            frame_push             (Fiber                  &fiber
+                                                      , cam_address_t           pid
+                                                      , u32                    *args
+                                                      , int                     arity
+                                                       );
+
+inline
+stack_frame_t*                  frame_top              (Fiber                  &fiber
+                                                       );
+
+inline
+void                            frame_pop              (Fiber                  &fiber
+                                                       );
+
+inline
+cam_address_t                   bp                     (Fiber                  &fiber
+                                                       );
+
+inline
+cam_address_t                   sp                     (Fiber                  &fiber
+                                                       );
+
+inline
+cam_args_t                      args                   (Fiber                  &fiber
+                                                       );
+
+inline
+int                             arity                  (Fiber                  &fiber
+                                                       );
+
 void                            call                   (Fiber                  &fiber
                                                       , cam_address_t           pid
-                                                      , cam_address_t          *args
+                                                      , u32                    *args
                                                       , int                     arity
                                                       , cam_k_t                 k
                                                       , void                   *ktx

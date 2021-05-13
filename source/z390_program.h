@@ -33,6 +33,10 @@ int                             load                   (Z390Program            &
                                                       , const ChunkProgram     *chunk
                                                        );
 
+void                            prepare                (Z390Program            &program
+                                                      , struct cam_s           *cam
+                                                       );
+
 }}}} // namespace akaFrame.cam.z390.program
 
 #endif // !_CAM_Z390_PROGRAM_H_
