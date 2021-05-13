@@ -35,7 +35,8 @@ void* allocate(i64 size, i64 align)
         size = std::max(size, divisor_size()); 
         CAM_ASSERT(divisor_size() % align == 0 && "bad alignment");
         CAM_ASSERT(size % divisor_size()  == 0 && "bad size");
-        void *m = VirtualAlloc(nullptr, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        void *m = VirtualAlloc(
+                nullptr, (SIZE_T)size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
         CAM_ASSERT(m && "failed to allocate memory pages");
         return m;
 }
@@ -134,7 +135,7 @@ void* allocate(i64 size, i64 align)
         size = std::max(size, divisor_size()); 
         CAM_ASSERT(divisor_size() % align == 0 && "bad alignment");
         CAM_ASSERT(size % divisor_size()  == 0 && "bad size");
-        void *m = aligned_alloc(align, size);
+        void *m = aligned_alloc((size_t)align, (size_t)size);
         CAM_ASSERT(m && "failed to allocate memory");
         return m;
 }

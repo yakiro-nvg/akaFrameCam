@@ -37,7 +37,7 @@ struct IdTableSut
 static void full_check(const IdTableModel &model, IdTableSut &sut)
 {
         REQUIRE(model.ids.size() == sut.mapping.size());
-        for (int i = 0; i < model.ids.size(); ++i) {
+        for (int i = 0; i < (int)model.ids.size(); ++i) {
                 auto mid = model.ids[i];
                 auto sid = sut.mapping[i];
                 if (mid.in_use) {
@@ -97,7 +97,7 @@ struct InUseIndexCommandBase
 
         void checkPreconditions(const Model &s0) const override
         {
-                RC_PRE(s0.ids.size() > 0);
+                RC_PRE(s0.ids.size() > (size_t)0);
                 RC_PRE(s0.ids[index(s0)].in_use);
         }
 };

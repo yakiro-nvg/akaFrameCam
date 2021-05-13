@@ -26,7 +26,7 @@ template <typename T>
 Array<T>& Array<T>::operator=(const Array<T> &other)
 {
         array::resize(*this, other._size);
-        memcpy(_items, other._items, sizeof(T) * other._size);
+        memcpy(_items, other._items, sizeof(T) * (size_t)other._size);
         return *this;
 }
 
@@ -72,7 +72,7 @@ void reserve(Array<T> &a, i64 capacity)
         const i64 num_pages = (required_bytes + dsize) / dsize;
         const i64 new_bytes = num_pages * dsize;
         T *const new_items = (T*)a._allocator.allocate(new_bytes);
-        memcpy(new_items, a._items, sizeof(T) * a._size);
+        memcpy(new_items, a._items, sizeof(T) * (size_t)a._size);
         a._allocator.deallocate(a._items);
         a._capacity = new_bytes / sizeof(T);
         a._items = new_items;

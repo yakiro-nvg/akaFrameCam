@@ -10,12 +10,23 @@ namespace akaFrameCam
 {
     public class Cam : IDisposable
     {
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate void K(IntPtr cam, int fid, IntPtr ktx);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
         private delegate int OnUnresolved(IntPtr cam, string name);
+        
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate void FiberEntry(IntPtr provider, int fid);
+        
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate void FiberLeave(IntPtr provider, int fid);
+        
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate void ProgramPrepare(
             IntPtr cam, int fid, int pid, IntPtr args, int arity);
+        
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate void ProgramExecute(IntPtr cam, int fid, int pid);
 
         private class ProgramRecord
