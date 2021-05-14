@@ -25,6 +25,7 @@ namespace akaFrameCam.NET.Runner
             var t = mainFiber.RunAsync();
             Console.WriteLine("mainFiber.runAsync returned");
             t.Wait();
+            cam.Dispose();
         }
     }
 }

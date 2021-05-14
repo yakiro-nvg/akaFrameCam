@@ -112,7 +112,7 @@ void                            cam_add_program        (struct cam_s           *
                                                        );
 
 CAM_API
-/// Adds a new code chunk, `buff` will not be copied internally, dont' free it.
+/// Adds a new code chunk, `buff` will not be copied internally, don't free it.
 cam_error_t                     cam_load_chunk         (struct cam_s           *cam
                                                       , const void             *buff
                                                       , int                     buff_size
