@@ -162,29 +162,29 @@ static bool write_chunk_program_text(FILE *outf, const Text &t)
         return true;
 }
 
-static bool write_chunk_program_external(FILE *outf, const External &e)
+static bool write_chunk_program_vcon(FILE *outf, const External &e)
 {
         size_t r;
 
-        ChunkProgramExternal ce;
-        ce.name_size = align_forward((int)e.name.length() + 1);
-        ce.address   = e.address;
-        r = fwrite(&ce, sizeof(ce), 1, outf);
+        ChunkProgramVcon cv;
+        cv.name_size = align_forward((int)e.name.length() + 1);
+        cv.address   = e.address;
+        r = fwrite(&cv, sizeof(cv), 1, outf);
         if (r != 1) {
-                printf("failed to write chunk program external\n");
+                printf("failed to write chunk program vcon\n");
                 return false;
         }
 
         r = fwrite(e.name.c_str(), 1, e.name.length(), outf);
         if (r != e.name.length()) {
-                printf("failed to write chunk program external name");
+                printf("failed to write chunk program vcon name");
                 return false;
         }
 
         static char ZERO[ALIGNMENT] = { 0 };
-        r = fwrite(ZERO, ce.name_size - e.name.length(), 1, outf);
+        r = fwrite(ZERO, cv.name_size - e.name.length(), 1, outf);
         if (r != 1) {
-                printf("failed to write chunk program external name padding");
+                printf("failed to write chunk program vcon name padding");
                 return false;
         }
 
@@ -196,11 +196,11 @@ static bool write_chunk_program(FILE *outf, const SdProgram &p)
         size_t r;
 
         ChunkProgram cp;
-        cp.entry         = p.entry;
-        cp.size          = p.size;
-        cp.name_size     = align_forward((int)p.name.length() + 1);
-        cp.num_texts     = (int)p.texts.size();
-        cp.num_externals = (int)p.externals.size();
+        cp.entry     = p.entry;
+        cp.size      = p.size;
+        cp.name_size = align_forward((int)p.name.length() + 1);
+        cp.num_texts = (int)p.texts.size();
+        cp.num_vcons = (int)p.externals.size();
         r = fwrite(&cp, sizeof(cp), 1, outf);
         if (r != 1) {
                 printf("failed to write chunk program");
@@ -229,7 +229,7 @@ static bool write_chunk_program(FILE *outf, const SdProgram &p)
 
         for (int i = 0; i < (int)p.externals.size(); ++i) {
                 auto &e = p.externals[i];
-                if (!write_chunk_program_external(outf, e)) {
+                if (!write_chunk_program_vcon(outf, e)) {
                         return false;
                 }
         }

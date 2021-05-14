@@ -73,9 +73,9 @@ int load(Z390Program &program, const ChunkProgram *chunk)
                 bytes_taken += sizeof(ChunkProgramText) + txt->size;
         }
 
-        for (int i = 0; i < (int)chunk->num_externals; ++i) {
-                auto ext = (const ChunkProgramExternal*)((const u8*)chunk + bytes_taken);
-                bytes_taken += sizeof(ChunkProgramExternal) + ext->name_size;
+        for (int i = 0; i < (int)chunk->num_vcons; ++i) {
+                auto vcn = (const ChunkProgramVcon*)((const u8*)chunk + bytes_taken);
+                bytes_taken += sizeof(ChunkProgramVcon) + vcn->name_size;
         }
 
         return bytes_taken;
@@ -95,9 +95,9 @@ void prepare(Z390Program &p, struct cam_s *cam)
                         bytes_taken += sizeof(ChunkProgramText) + txt->size;
                 }
 
-                for (int i = 0; i < (int)p._chunk->num_externals; ++i) {
-                        auto ext = (const ChunkProgramExternal*)((const u8*)p._chunk + bytes_taken);
-                        bytes_taken += sizeof(ChunkProgramExternal) + ext->name_size;
+                for (int i = 0; i < (int)p._chunk->num_vcons; ++i) {
+                        auto ext = (const ChunkProgramVcon*)((const u8*)p._chunk + bytes_taken);
+                        bytes_taken += sizeof(ChunkProgramVcon) + ext->name_size;
                         auto address = (cam_address_t*)(ws + ext->address);
                         auto name = (const char*)(ext + 1);
                         auto pid = cam_resolve(cam, name);

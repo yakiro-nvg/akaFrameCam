@@ -25,7 +25,7 @@ struct ChunkProgram
         u32 size;
         u32 name_size;
         u32 num_texts;
-        u32 num_externals;
+        u32 num_vcons;
 };
 
 struct ChunkProgramText
@@ -34,7 +34,7 @@ struct ChunkProgramText
         u32 size;
 };
 
-struct ChunkProgramExternal
+struct ChunkProgramVcon
 {
         u32 name_size;
         u32 address;
